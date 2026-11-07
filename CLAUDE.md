@@ -6,32 +6,9 @@
 
 - **Что:** Egiz v2 (рабочее название) — **проектировщик кампании аналоговых испытаний**. Пользователь выбирает цель (район базы у южного полюса Луны или место посадки на Марсе) и шаблон задач миссии (посадка, выходы, мобильность, низкое Солнце, холод). Сервис меряет цель и ~3 000 квадратов Земли на одних и тех же базах критериев NASA, считает соответствие каждой задаче и находит наименьший набор площадок Земли (k = 1…3), который лучше всего покрывает задачи, — с реестром того, чего Земля дать не может. Метод проверяется пререгистрированно: места, которые NASA использовала для конкретных задач, должны оказаться высоко именно для этих задач.
 - **Челлендж:** [Identify Earth Locations that Analog the Permanent Moon Base Locations and Mars](https://www.spaceappschallenge.org/2026/challenges/identify-earth-locations-that-analog-the-permanent-moon-base-locations-and-mars/), NASA Space Apps Challenge 2026.
-- **Хакатон:** 14–15.11.2026, площадка Astana (Miras International School). Работа над проектом — с **14.11 09:00** по Астане. Питч и судейство — **15.11 14:00**. Глобальный дедлайн — 15.11 23:59 по Астане.
 - **Команда:** 6 человек, роли MEMBER_A…MEMBER_F (§9). Время в документах — по Астане (UTC+5).
 - **Главные документы:** решение — [FINAL_CONCEPT_DECISION](docs/innovation/FINAL_CONCEPT_DECISION.md); продукт — [COMPLETE_PRODUCT_SPEC](docs/product/COMPLETE_PRODUCT_SPEC.md); наука — [MATHEMATICAL_SPECIFICATION](docs/science/MATHEMATICAL_SPECIFICATION.md); инженерия — [FINAL_ARCHITECTURE](docs/engineering/FINAL_ARCHITECTURE.md); план — [HOUR_BY_HOUR_EXECUTION](docs/planning/HOUR_BY_HOUR_EXECUTION.md). План v1 — в архиве `docs/archive/v1/` (не использовать для работы).
 
-## 1. Правило № 1: до старта хакатона над проектом не работаем
-
-Официально: «Teams are not allowed to begin working on the challenges prior to the hackathon» ([FAQ 2026](https://www.spaceappschallenge.org/resources/participant-faqs/)). [Team Formation Guide 2026](https://www.spaceappschallenge.org/resources/team-formation-guide/) уточняет: работу над проектом не начинаем до 14.11.2026 9:00 по местному времени. Приватный репозиторий не даёт права нарушать сроки.
-
-**Перед любой задачей проверь время:** `python3 tools/tasks.py next` — первая строка скажет, закрыты ли задачи HACK. Старт: `2026-11-14T04:00:00Z`.
-
-У каждой задачи есть поле `authorization` ([PRE_EVENT_AUTHORIZATION](docs/competition/PRE_EVENT_AUTHORIZATION.md)):
-
-| Категория | Что значит | Как проверяется |
-| --- | --- | --- |
-| `PERMITTED` | Можно сейчас: регистрация, аккаунты, учёба на посторонних данных, документы планирования | — |
-| `CLARIFICATION_REQUIRED` | Только после письменного разрешения организаторов и только в его рамках (`scope`) | `tools/tasks.py` не даёт начать задачу без `authorization_evidence`; записать разрешение: `python3 tools/tasks.py authorize ID --source … --scope …` |
-| `DEFER_UNTIL_EVENT` | Только с 14.11 09:00 (все задачи `phase: HACK`) | `tools/tasks.py` отказывает до старта |
-
-| До 14.11 09:00 по Астане **можно** | До 14.11 09:00 по Астане **нельзя** |
-| --- | --- |
-| PREP- и RULE-задачи; AUTH-задачи — только с записанным разрешением | Любая задача с `"phase": "HACK"` |
-| Учиться на посторонних примерах вне этого репозитория | Код решения: `pipeline/`, `web/`, `contracts/`, `data/` |
-| Заводить аккаунты, ставить инструменты, проверять вход в сервисы | Скачивать и обрабатывать данные челленджа (если нет разрешения A2), считать атрибуты |
-| Поддерживать документы планирования в `docs/`, `project/`, `tools/` | Макеты, дизайн, логотип, тексты для подачи, видео, слайды |
-
-Если пользователь до старта просит выполнить HACK-задачу: вежливо откажи, процитируй правило, предложи его PREP-задачи (`python3 tools/tasks.py next MEMBER_X`). Не обходи правило через «черновик», «пример» или «вне репозитория для проекта».
 
 ## 2. Источники правды
 
@@ -85,7 +62,6 @@
 
 ## 5. Никогда
 
-- Не начинай HACK-задачи до 14.11 09:00 по Астане и CLARIFICATION_REQUIRED-задачи без записанного разрешения; не помогай обойти эти правила.
 - Не пропускай критерии приёмки молча и не ставь DONE без доказательств.
 - Не выдумывай результаты тестов, числа, ссылки, цитаты и научные источники.
 - Не утверждай, что функция работает, если её нет или она не проверена.
@@ -204,4 +180,4 @@ NOAA-алгоритм Солнца → pipeline/lighting (C) → sun_windows.jso
 
 ## 15. Общие контракты
 
-`contracts/*.schema.json` и `web/src/types/contracts.ts` — интерфейсы между участниками. Замораживаются в v1 на старте (INFRA-02, Сб 11:00). Изменения — только по протоколу DEVELOPMENT_WORKFLOW §7: предложение в #general → согласие потребителей → MEMBER_A меняет схему и версию → потребители обновляются → запись в INTEGRATION_STATUS.md.
+`contracts/*.schema.json` и `web/src/types/contracts.ts` — интерфейсы между участниками. Изменения — только по протоколу DEVELOPMENT_WORKFLOW §7: предложение в #general → согласие потребителей → MEMBER_A меняет схему и версию → потребители обновляются → запись в INTEGRATION_STATUS.md.
