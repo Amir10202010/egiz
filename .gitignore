@@ -28,6 +28,7 @@ dist/
 
 # Big data stays local: only small processed JSON goes to git
 data/raw/
+data/derived/
 data/kernels/*.bsp
 data/kernels/*.tls
 data/kernels/*.tpc

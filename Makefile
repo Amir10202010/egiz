@@ -1,5 +1,5 @@
 # Written with AI assistance (Codex); human review pending.
-PYTHON ?= $(if $(wildcard .venv/bin/python),.venv/bin/python,python3)
+PYTHON ?= $(if $(wildcard .venv/bin/python),.venv/bin/python,$(if $(wildcard .venv/Scripts/python.exe),.venv/Scripts/python.exe,python3))
 RUFF = $(PYTHON) -m ruff
 PROJECT ?= $(EE_PROJECT)
 EARTH_COUNT_PER_STRATUM ?= 1000
@@ -77,3 +77,22 @@ dynamics-check:
 terrain-build:
 	$(PYTHON) -m pipeline.common.terrain_pyramid
 	node web/scripts/copy-data.mjs
+
+# Geospatial release (docs/GEOSPATIAL_DATA_INTERFACE.md). GEO_SCOPE=pilot|all; GEO_SAMPLE=N reselects sampled AOIs.
+GEO_SCOPE ?= all
+GEO_SAMPLE ?= 0
+.PHONY: geo-audit geo-acquire geo-features geo-manifest geo-validate geo-illumination geo-test
+geo-audit:
+	$(PYTHON) -m pipeline.geodata audit
+geo-acquire:
+	$(PYTHON) -m pipeline.geodata acquire --scope $(GEO_SCOPE) --sample $(GEO_SAMPLE)
+geo-features:
+	$(PYTHON) -m pipeline.geodata features --scope $(GEO_SCOPE)
+geo-manifest:
+	$(PYTHON) -m pipeline.geodata manifest --scope $(GEO_SCOPE)
+geo-illumination:
+	$(PYTHON) -m pipeline.lighting.real_shadows
+geo-validate:
+	$(PYTHON) -m pipeline.geodata validate
+geo-test:
+	$(PYTHON) -m pytest -q pipeline/geodata
