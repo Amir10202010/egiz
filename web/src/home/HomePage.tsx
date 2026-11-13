@@ -134,6 +134,7 @@ export function HomePage() {
   };
 
   const tools: { route: Route; title: string; ru: string; text: string; textRu: string }[] = [
+    { route: 'studio', title: 'Mission Studio', ru: 'Студия миссий', text: 'A measured 5 m lunar world with SPICE lighting, AI terrain intelligence, route planning and terramechanics rover rehearsal.', textRu: 'Измеренный лунный мир 5 м с освещением SPICE, ИИ-анализом рельефа, планированием маршрутов и репетицией ровера с террамеханикой.' },
     { route: 'lab', title: 'Engineering lab', ru: 'Инженерная лаборатория', text: 'Measured terrain, vehicles, transfers and surface operations in one 3D workbench.', textRu: 'Измеренный рельеф, техника, перелёты и работа на поверхности — в одном 3D-стенде.' },
     { route: 'campaign', title: 'Campaign', ru: 'Кампания', text: 'Choose objectives and compute the smallest set of Earth sites that covers them.', textRu: 'Выберите цели и рассчитайте минимальный набор земных площадок, который их покрывает.' },
     { route: 'twin', title: 'Same Sun', ru: 'Одно Солнце', text: 'Compare a target and an Earth site under identical solar geometry.', textRu: 'Сравните цель и земную площадку при одинаковой геометрии Солнца.' },
@@ -240,7 +241,8 @@ export function HomePage() {
           {moon.h_max_deg != null && <Spec label={L(lang, 'Max sun elevation', 'Макс. высота Солнца')}>{moon.h_max_deg.toFixed(1)}°</Spec>}
           {templateFor(moon) && <Spec label={L(lang, 'Objectives', 'Цели')}>{templateFor(moon)!.objectives.length}</Spec>}
         </dl>
-        <button className="eg-button" data-reveal onClick={() => open('lab', moon)}>{L(lang, 'Explore the terrain', 'Изучить рельеф')}<ArrowRight size={16} strokeWidth={1.6} /></button>
+        <div className="hm-plate-actions"><button className="eg-button" data-reveal onClick={() => open('studio', moon)}>{L(lang, 'Enter the 5 m world', 'Войти в мир 5 м')}<ArrowRight size={16} strokeWidth={1.6} /></button>
+        <button className="eg-button eg-button-ghost" data-reveal onClick={() => open('lab', moon)}>{L(lang, 'Explore the terrain', 'Изучить рельеф')}<ArrowRight size={16} strokeWidth={1.6} /></button></div>
       </div>
     </section>}
 

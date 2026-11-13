@@ -12,7 +12,8 @@
     "evidence": "Evidence",
     "twin": "Same Sun",
     "lab": "Engineering lab",
-    "atlas": "Transferability"
+    "atlas": "Transferability",
+    "studio": "Mission Studio"
   },
   "common": {
     "synthetic": "SYNTHETIC DEMO DATA — not NASA observations",

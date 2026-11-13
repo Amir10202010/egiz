@@ -24,6 +24,7 @@ import './styles/theme.css';
 
 const MissionLab = lazy(() => import('./mission/MissionLab'));
 const AtlasLab = lazy(() => import('./atlas/AtlasLab'));
+const AstralStudio = lazy(() => import('./studio/AstralStudio'));
 
 function Workspace({ availableModes }: { availableModes: DataMode[] }) {
   useLanguage();
@@ -32,8 +33,8 @@ function Workspace({ availableModes }: { availableModes: DataMode[] }) {
   useEffect(() => { if (previousRoute.current !== route) { const heading = document.querySelector<HTMLElement>('#main-content h1'); if (heading) { heading.tabIndex = -1; heading.focus({ preventScroll: true }); } previousRoute.current = route; } }, [route]);
   useEffect(() => { document.documentElement.dataset.route = route; }, [route]);
   return <><SkipLink /><SiteHeader availableModes={availableModes} />
-    <div id="main-content" className={`focused-workspace route-${route}`} tabIndex={-1}>{localizeText(route === 'home' ? <HomePage /> : route === 'lab' ? <Suspense fallback={<main className="page eg-loading"><span className="eg-loading-bar" aria-hidden="true" /><h1>{localizeText("Loading Mission Lab…")}</h1></main>}><MissionLab model={model} /></Suspense> : route === 'atlas' ? <Suspense fallback={<main className="page eg-loading"><span className="eg-loading-bar" aria-hidden="true" /><h1>{localizeText("Loading ATLAS-Π…")}</h1></main>}><AtlasLab /></Suspense> : route === 'brief' ? <BriefPage /> : route === 'matrix' ? <MatrixPage model={model} /> : route === 'evidence' ? <EvidencePage /> : route === 'twin' ? <TwinPage /> : <CampaignPage model={model} />)}</div>
-    {route !== 'home' && <InterfaceGuide route={route}/>}
+    <div id="main-content" className={`focused-workspace route-${route}`} tabIndex={-1}>{localizeText(route === 'home' ? <HomePage /> : route === 'lab' ? <Suspense fallback={<main className="page eg-loading"><span className="eg-loading-bar" aria-hidden="true" /><h1>{localizeText("Loading Mission Lab…")}</h1></main>}><MissionLab model={model} /></Suspense> : route === 'studio' ? <Suspense fallback={<main className="page eg-loading"><span className="eg-loading-bar" aria-hidden="true" /><h1>{localizeText("Loading Mission Studio…")}</h1></main>}><AstralStudio /></Suspense> : route === 'atlas' ? <Suspense fallback={<main className="page eg-loading"><span className="eg-loading-bar" aria-hidden="true" /><h1>{localizeText("Loading ATLAS-Π…")}</h1></main>}><AtlasLab /></Suspense> : route === 'brief' ? <BriefPage /> : route === 'matrix' ? <MatrixPage model={model} /> : route === 'evidence' ? <EvidencePage /> : route === 'twin' ? <TwinPage /> : <CampaignPage model={model} />)}</div>
+    {route !== 'home' && route !== 'studio' && <InterfaceGuide route={route}/>}
     {localizeText(selectedSite && route !== 'home' && <SiteDrawer model={model} />)}
   </>;
 }

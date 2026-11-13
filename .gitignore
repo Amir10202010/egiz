@@ -55,3 +55,4 @@ test-results/
 # Generated native catalogs and measured mesh copies
 web/public/dynamics/
 web/public/terrain/
+web/public/world/

@@ -92,7 +92,7 @@ export async function copyDatasets(root = path.resolve(path.dirname(fileURLToPat
   for (const name of required) await copyFile(path.join(sources.demo, `${name}.json`), path.join(destination, `${name}.json`));
   await writeFile(path.join(destination, 'datasets.json'), `${JSON.stringify({ version: '1.0.0', default: modes.includes('pilot') ? 'pilot' : 'demo', modes }, null, 2)}\n`);
 
-  for (const name of ['dynamics','terrain']) {
+  for (const name of ['dynamics','terrain','world']) {
     const source = path.join(root,'data',name);
     if ((await readdir(source).catch(()=>[])).length) await cp(source,path.join(root,'web/public',name),{recursive:true});
   }

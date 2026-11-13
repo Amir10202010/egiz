@@ -6,7 +6,7 @@ EARTH_COUNT_PER_STRATUM ?= 1000
 EARTH_OUT_DIR ?= data/processed
 EARTH_ARGS ?=
 
-.PHONY: setup fixtures data earth test check web dev offline serve clean atlas atlas-verify atlas-discover atlas-check
+.PHONY: setup fixtures data earth test check web dev offline serve clean atlas atlas-verify atlas-discover atlas-check world world-verify world-check
 
 setup:
 	python3 -m venv .venv
@@ -92,3 +92,15 @@ atlas-discover:
 atlas-check:
 	$(PYTHON) -m pytest -q tests/test_analog_transfer.py
 	npm --prefix web test -- src/atlas
+
+# EGIZ ASTRAL planetary world package (additive; reads data/raw/targets, writes data/world).
+world:
+	$(PYTHON) -m pipeline.world build
+	node web/scripts/copy-data.mjs
+
+world-verify:
+	$(PYTHON) -m pipeline.world verify
+
+world-check:
+	$(PYTHON) -m pytest -q tests/test_world.py
+	npm --prefix web test -- src/world src/studio
