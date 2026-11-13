@@ -11,7 +11,8 @@
     "matrix": "Fidelity matrix",
     "evidence": "Evidence",
     "twin": "Same Sun",
-    "lab": "Engineering lab"
+    "lab": "Engineering lab",
+    "atlas": "Transferability"
   },
   "common": {
     "synthetic": "SYNTHETIC DEMO DATA — not NASA observations",

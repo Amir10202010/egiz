@@ -70,6 +70,20 @@ export async function copyDatasets(root = path.resolve(path.dirname(fileURLToPat
       if (doc.schema !== 'egiz.spice_catalog' || doc.version !== '1.0.0' || !doc.entries?.length) throw new Error('Invalid SPICE catalog.');
       await copyFile(geometryPath, path.join(target, 'spice_geometry.json'));
     } else await rm(path.join(target, 'spice_geometry.json'), { force: true });
+    // ATLAS-Pi transferability bundle (optional, measured modes only). Refuse stale bundles:
+    // its recorded input hashes must match the files packaged for this mode.
+    const atlasPath = path.join(sources[mode], 'atlas_pi.json');
+    const atlas = mode === 'demo' ? null : await readFile(atlasPath, 'utf8').catch(() => null);
+    if (atlas) {
+      const doc = JSON.parse(atlas);
+      const stale = [];
+      for (const name of ['earth_candidates.json', 'targets.json', 'results.json', 'mission_terrain.json']) {
+        const bytes = await readFile(path.join(sources[mode], name)).catch(() => null);
+        if (!bytes || doc.inputs?.[name] !== createHash('sha256').update(bytes).digest('hex')) stale.push(name);
+      }
+      if (doc.schema !== 'egiz.atlas_pi' || !/^1\.\d+\.\d+$/.test(doc.version) || doc.synthetic !== false || stale.length) throw new Error(`${mode} ATLAS-Pi bundle is stale or invalid (${stale.join(', ') || 'schema'}). Run python -m pipeline.analog_transfer build.`);
+      await copyFile(atlasPath, path.join(target, 'atlas_pi.json'));
+    } else await rm(path.join(target, 'atlas_pi.json'), { force: true });
     console.log(`Egiz: packaged explicit ${mode} source (${required.length} files).`);
   }
   // Legacy direct data links remain the explicitly labelled demo. Observed data is

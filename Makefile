@@ -6,7 +6,7 @@ EARTH_COUNT_PER_STRATUM ?= 1000
 EARTH_OUT_DIR ?= data/processed
 EARTH_ARGS ?=
 
-.PHONY: setup fixtures data earth test check web dev offline serve clean
+.PHONY: setup fixtures data earth test check web dev offline serve clean atlas atlas-verify atlas-discover atlas-check
 
 setup:
 	python3 -m venv .venv
@@ -77,3 +77,18 @@ dynamics-check:
 terrain-build:
 	$(PYTHON) -m pipeline.common.terrain_pyramid
 	node web/scripts/copy-data.mjs
+
+# ATLAS-Pi mission-conditioned transferability (additive; reads data/pilot only).
+atlas:
+	$(PYTHON) -m pipeline.analog_transfer build
+	node web/scripts/copy-data.mjs
+
+atlas-verify:
+	$(PYTHON) -m pipeline.analog_transfer verify
+
+atlas-discover:
+	$(PYTHON) -m pipeline.analog_transfer discover
+
+atlas-check:
+	$(PYTHON) -m pytest -q tests/test_analog_transfer.py
+	npm --prefix web test -- src/atlas
