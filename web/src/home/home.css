@@ -223,12 +223,15 @@
 .hm-panel { align-self: end; display: flex; flex-direction: column; padding-left: clamp(24px, 2.4vw, 36px); border-left: 1px solid var(--rule-strong); }
 .hm-panel-kicker { font-family: var(--font-mono); font-size: 10.5px; letter-spacing: .2em; text-transform: uppercase; color: var(--paper-3); margin: 0 0 14px; }
 .hm-panel-label { font-family: var(--font-mono); font-size: 10.5px; letter-spacing: .18em; text-transform: uppercase; color: var(--paper-3); margin: 30px 0 10px; }
-.hm-dest { display: flex; gap: 28px; }
-.hm-dest button { position: relative; padding: 0 0 8px; font-family: var(--font-display); font-weight: 700; font-size: clamp(30px, 2.6vw, 40px); line-height: 1; letter-spacing: .04em; text-transform: uppercase; color: rgba(240,240,245,.28); transition: color .4s ease; }
+.hm-dest { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.hm-dest button { position: relative; isolation: isolate; overflow: hidden; display: flex; align-items: flex-end; aspect-ratio: 3 / 2; padding: 12px 14px; border: 1px solid rgba(240,240,245,.14); background: #050505; font-family: var(--font-display); font-weight: 700; font-size: clamp(20px, 1.7vw, 26px); line-height: 1; letter-spacing: .06em; text-transform: uppercase; color: rgba(240,240,245,.55); text-align: left; transition: color .4s ease, border-color .4s ease; }
+.hm-dest button .destination-artwork { position: absolute; inset: 0; width: 100%; height: 100%; z-index: -2; object-position: 64% 50%; opacity: .42; filter: saturate(.55); transform: scale(1.06); transition: opacity .6s ease, filter .6s ease, transform 1.2s var(--ease-out); }
+.hm-dest button::before { content: ''; position: absolute; inset: 0; z-index: -1; background: linear-gradient(0deg, rgba(0,0,0,.78) 0%, rgba(0,0,0,0) 62%); pointer-events: none; }
 .hm-dest button::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 2px; background: var(--paper); transform: scaleX(0); transform-origin: 0 50%; transition: transform .55s var(--ease-out); }
-.hm-dest button:hover { color: rgba(240,240,245,.62); }
-.hm-dest button[aria-checked=true] { color: var(--paper); }
-.hm-dest button[aria-checked=true]::after { transform: scaleX(1); }
+.hm-dest button:hover { color: rgba(240,240,245,.85); }
+.hm-dest button:hover .destination-artwork { opacity: .7; transform: scale(1.03); }
+.hm-dest button[aria-checked=true] { color: var(--paper); border-color: rgba(240,240,245,.4); }
+.hm-dest button[aria-checked=true] .destination-artwork { opacity: 1; filter: none; transform: scale(1); }
 
 .hm-exp-list { display: flex; flex-direction: column; border-top: 1px solid var(--rule); }
 .hm-exp-list button { position: relative; display: flex; align-items: center; gap: 14px; height: 46px; padding: 0 0 0 2px; border-bottom: 1px solid var(--rule); color: var(--paper-3); text-align: left; transition: color .3s ease, padding .5s var(--ease-out); }
@@ -317,7 +320,10 @@
 /* ---------- one film behind the page ---------- */
 .hm { position: relative; isolation: isolate; }
 .hm-film { position: fixed; inset: 0; z-index: 0; pointer-events: none; background: #000; }
-.hm-film video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 62% 50%; }
+.hm-film-layer { position: absolute; inset: 0; }
+.hm-film-layer > img, .hm-film-layer > video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 62% 50%; }
+.hm-film-layer > video { opacity: 0; transition: opacity .35s ease; }
+.hm-film-layer > video.is-ready { opacity: 1; }
 .hm > section, .hm > footer { position: relative; z-index: 1; }
 .hm-hero { background: transparent; }
 /* reading sections sit on a veil over the moving film; the edges stay soft so nothing reads as a black gap */
@@ -332,7 +338,7 @@
 .hm-window-top .hm-plate-copy { padding-top: clamp(140px, 22vh, 240px); }
 .hm-footer { background: #000; }
 @media (max-width: 700px) {
-  .hm-film video { object-position: 60% 50%; }
+  .hm-film-layer > img, .hm-film-layer > video { object-position: 60% 50%; }
   .hm-window { min-height: 115svh; }
   .hm-window::after { background: linear-gradient(0deg, rgba(0,0,0,.85) 0%, rgba(0,0,0,.4) 45%, rgba(0,0,0,0) 72%); }
 }
@@ -438,4 +444,17 @@ html.lenis, html.lenis body { height: auto; }
 /* Decode: the real text for assistive tech, a fixed-width scramble for the eye */
 .fa-sr { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 .fa-dec { white-space: pre-wrap; }
-.hm-panel-link.hm-investigate { margin: 6px 0 20px; color: var(--paper); font-size: 13px; }
+
+/* ---------- phones: the film and the story, without the instrument panels and reference detail ---------- */
+@media (max-width: 760px) {
+  .hm-hud, .hm-path { display: none; }
+  .hm-hero-coord, .hm-exp-list + .hm-panel-label, .hm-params { display: none; }
+  .hm-dest button { aspect-ratio: 5 / 2; }
+  .hm-thesis-cols p + p { display: none; }
+  .hm-target-figure, .hm-specs { display: none; }
+  .hm-target-copy { padding-top: 0; }
+  .hm-method .hm-steps { display: none; }
+  .hm-footnote { display: none; }
+  .hm-ledger-alt { display: none; }
+  .hm-index-text { display: none; }
+}

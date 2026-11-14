@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import copy
 import math
+from typing import Any
 
 import numpy as np
 
@@ -271,10 +272,8 @@ def rank_profile(snapshot: Snapshot, target: dict, template: dict, objective: di
             env = {"status": "not_applicable", "value": None,
                    "reason": "This objective uses no climate attributes"}
         elif any(value is None for value in climate):
-            used = [a for a in CLIMATE_ATTRS if any(s["attr"] == a for s in objective["attributes"])]
-            detail = "; ".join(tile["missing_reasons"][a] for a in used if a in tile.get("missing_reasons", {}))
-            env = _not_available("Climate values missing (" + ", ".join(used) + ")"
-                                 + (f": {detail}" if detail else ""))
+            gaps = [m for m in missing if m.split(" ")[0] in CLIMATE_ATTRS]
+            env = _not_available("Climate attribute not scorable: " + "; ".join(gaps))
         else:
             env = {"status": "computed", "provenance_class": prov,
                    "value": float(np.exp(np.mean(np.log(np.maximum(climate, 1e-6)))))}
@@ -282,7 +281,7 @@ def rank_profile(snapshot: Snapshot, target: dict, template: dict, objective: di
         passed = [c["passed"] for c in checks]
         op_value = False if False in passed else (None if None in passed else True)
         stab_value = stab.get(aoi)
-        explanation = {"matching": matching, "mismatches": mismatches,
+        explanation: dict[str, Any] = {"matching": matching, "mismatches": mismatches,
                        "attributes": attributes, "missing_fields": missing}
         if tile.get("environment") or tile.get("geology"):
             explanation["context"] = {
