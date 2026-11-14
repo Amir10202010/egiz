@@ -23,6 +23,18 @@ export interface RoverExperiment {
   cases: Record<'target' | 'earth_load_matched' | 'earth_mass_matched', RoverCase>;
   deltas: Record<'earth_load_matched' | 'earth_mass_matched', { d_slope_limit_deg: number; d_traversable_frac: number; sinkage_ratio: number | null; energy_ratio: number | null }>;
   assumptions: string[]; limitations: string[]; references: string[];
+  /** Which outputs depend on this window (window) and which only on gravity, rover and soil (body). */
+  levels?: { body: string[]; window: string[]; body_label: string; note: string };
+  soil_reused_from_moon?: boolean; soil_note?: string | null;
+}
+/** Window-independent rover terramechanics, reported once per body (pipeline.discovery.rover.body_rover_model). */
+export interface RoverBodyModel {
+  level: 'body'; label: string; body: Body; status: string; model: string;
+  rover: Record<string, number | string>; soil: Record<string, number | string>;
+  soil_reused_from_moon: boolean; soil_note: string | null; note: string;
+  cases: Record<'target' | 'earth_load_matched' | 'earth_mass_matched', { label: string; slope_limit_deg: number; sinkage_mm: number }>;
+  deltas: Record<'earth_load_matched' | 'earth_mass_matched', { d_slope_limit_deg: number; sinkage_ratio: number | null }>;
+  limitations: string[]; references: string[];
 }
 export interface ShortlistEntry {
   window: string; rank: number; score: number; fidelity: number; lo: number; hi: number; coverage: number;
@@ -54,6 +66,7 @@ export interface DiscoveryBundle {
   };
   windows: Columns & { id: string[]; name: string[]; lon: number[]; lat: number[]; pool: string[]; in_population: boolean[] };
   targets: TargetEntry[];
+  rover_body_level?: Partial<Record<Body, RoverBodyModel>>;
   unavailable_targets: { id: string; reason: string }[];
   benchmark_sites: BenchmarkSite[];
   reproduce: string[];

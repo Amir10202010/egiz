@@ -83,6 +83,24 @@ describe.skipIf(!has)('parity with the Python bundle', () => {
       }
     }
   });
+  it('separates body-level rover outputs from window-level ones', () => {
+    for (const t of b.targets) {
+      const withRover = t.shortlist.filter(x => x.rover);
+      for (const e of withRover) {
+        const ex = roverExperiment(slopeCdf(n => col(b, n, b.windows.id.indexOf(e.window)))!, t.body, e.window);
+        expect(ex.levels!.body).toEqual(['slope_limit_deg', 'sinkage_mm', 'd_slope_limit_deg', 'sinkage_ratio']);
+        expect(ex.levels!.window).toEqual(['traversable_frac', 'climbing_energy_j_per_m', 'd_traversable_frac', 'energy_ratio']);
+        const m = b.rover_body_level![t.body]!;
+        for (const k of ['target', 'earth_load_matched', 'earth_mass_matched'] as const) {
+          expect(ex.cases[k].slope_limit_deg).toBeCloseTo(m.cases[k].slope_limit_deg, 2);
+          expect(ex.cases[k].sinkage_mm).toBeCloseTo(m.cases[k].sinkage_mm, 2);
+          expect(m.cases[k]).not.toHaveProperty('traversable_frac');
+        }
+        expect(ex.soil_reused_from_moon).toBe(t.body === 'mars');
+      }
+      expect(b.rover_body_level![t.body]!.soil_reused_from_moon).toBe(t.body === 'mars');
+    }
+  });
 });
 
 describe.skipIf(!has)('research assistant tools', () => {

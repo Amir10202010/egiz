@@ -13,6 +13,7 @@ import math
 from pipeline.discovery import ROOT
 from pipeline.discovery import dimensions as D
 from pipeline.discovery.fingerprint import Target, Window
+from pipeline.discovery.rover import body_rover_model
 
 ALT_CSV = ROOT / "data" / "curated" / "gap_alternatives.csv"
 CO2_EARTH_FRAC = 0.042  # % by volume, ~420 ppm global mean (NOAA GML 2024)
@@ -30,6 +31,7 @@ RELEVANCE = {  # which mission profiles each gap matters most for
     "noon_elevation": ("power_illumination",), "solar_flux": ("power_illumination",),
     "vegetation": ("eva_geology", "rover_mobility"), "magnetic_field": ("astrobiology",),
     "dust": ("rover_mobility", "power_illumination"), "slope_distribution": ("rover_mobility",),
+    "rover_slope_limit": ("rover_mobility",), "rover_sinkage": ("rover_mobility",),
 }
 
 
@@ -119,6 +121,20 @@ def gap_ledger(target: Target, w: Window, terrain_w1_deg: float | None = None) -
                      target_evidence="literature", source="no dust dataset acquired (see dimension aeolian_dust)",
                      uncertainty="not quantified", measurable=False,
                      note="not measurable with the evidence acquired; needs MERRA-2/MAIAC (Earth) and TES/MCS (Mars)"))
+    rm = body_rover_model(target.body)
+    body_note = ("body-level, model estimate: identical for every Earth candidate on this body (gravity, rover and "
+                 "assumed soil only; not this window's terrain); Earth value = mass-matched Earth test")
+    if rm["soil_note"]:
+        body_note += "; " + rm["soil_note"]
+    for key, param, unit, field in (("rover_slope_limit", "Rover traction-limited slope (body-level)", "deg", "slope_limit_deg"),
+                                    ("rover_sinkage", "Rover wheel sinkage (body-level)", "mm", "sinkage_mm")):
+        rows.append(_row(key, param, unit, round(rm["cases"]["target"][field], 2),
+                         round(rm["cases"]["earth_mass_matched"][field], 2),
+                         earth_evidence="modelled (CF_TERRAMECHANICS, body-level)",
+                         target_evidence="modelled (CF_TERRAMECHANICS, body-level)",
+                         source="Bekker/Wong terramechanics; " + rm["soil"]["name"],
+                         uncertainty="model estimate; soil unmeasured; direction of the transfer error contested",
+                         alternative=alt.get("Reduced gravity"), note=body_note))
     if terrain_w1_deg is not None:
         rows.append(_row("slope_distribution", "Slope-distribution mismatch (1-Wasserstein)", "deg", 0.0,
                          round(float(terrain_w1_deg), 3), earth_evidence="derived (Copernicus GLO-30)",

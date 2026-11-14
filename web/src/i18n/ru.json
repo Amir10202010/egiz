@@ -1963,5 +1963,20 @@
   "Lithology": "Литология",
   "Aridity": "Аридность",
   "Thermal": "Тепло",
-  "Sun geometry": "Солнце"
+  "Sun geometry": "Солнце",
+  "Body-level, model estimate": "Уровень небесного тела, модельная оценка",
+  "same for every Earth candidate for Mars": "одинаково для всех земных кандидатов для Марса",
+  "same for every Earth candidate for the Moon": "одинаково для всех земных кандидатов для Луны",
+  "Traction-limited slope": "Предельный уклон по сцеплению",
+  "at target gravity": "при гравитации цели",
+  "in a mass-matched Earth test": "в земном испытании с той же массой",
+  "wheel sinkage": "погружение колеса",
+  "Depends on gravity, rover and assumed soil only — not on this window. Also listed in the gap ledger.": "Зависит только от гравитации, ровера и принятого грунта — не от этого окна. Также указано в реестре расхождений.",
+  "Mars runs reuse the Apollo-era lunar soil parameters; Mars soil is unmeasured here.": "Для Марса повторно используются параметры лунного грунта эпохи «Аполлона»; марсианский грунт здесь не измерен.",
+  "Window-level": "Уровень окна",
+  "uses this window's measured slope distribution (GLO-30, 100 m)": "использует измеренное распределение уклонов этого окна (GLO-30, 100 м)",
+  "On this terrain a mass-matched Earth test mis-states the traversable fraction by": "На этом рельефе земное испытание с той же массой искажает проходимую долю на",
+  "points and climbing energy by": "п. п., а энергию подъёма — в",
+  "Rover traction-limited slope (body-level)": "Предельный уклон ровера по сцеплению (уровень тела)",
+  "Rover wheel sinkage (body-level)": "Погружение колеса ровера (уровень тела)"
 }

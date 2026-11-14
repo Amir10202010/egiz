@@ -50,11 +50,25 @@ def write_report() -> str:
         top = t["shortlist"][0]
         if top.get("rover"):
             r = top["rover"]["deltas"]["earth_mass_matched"]
-            L += ["", f"Rover experiment on the top window (model estimate): a mass-matched Earth test mis-states the target "
-                      f"slope limit by {_f(r['d_slope_limit_deg'], 1)}°, traversable fraction by "
-                      f"{_f(r['d_traversable_frac'] * 100, 1)} points, sinkage ×{_f(r['sinkage_ratio'], 2)}, "
-                      f"climbing energy ×{_f(r['energy_ratio'], 2)}."]
+            L += ["", f"Rover experiment on the top window (window-level, model estimate; uses this window's measured "
+                      f"slope distribution): a mass-matched Earth test mis-states the traversable fraction by "
+                      f"{_f(r['d_traversable_frac'] * 100, 1)} points and climbing energy ×{_f(r['energy_ratio'], 2)}. "
+                      f"Slope limit and sinkage are body-level (see “Rover model, body level”)."]
         L.append("")
+    rb = b.get("rover_body_level") or {}
+    if rb:
+        L += ["## Rover model, body level", "",
+              "Traction-limited slope and wheel sinkage depend only on gravity, the rover and the assumed soil, so they are "
+              "the same for every Earth window on a body (body-level, model estimate; CF_TERRAMECHANICS, static Bekker). "
+              "They are reported once here, not per site.", "",
+              "| Body | Slope limit, target gravity | Δ slope limit, Earth mass-matched test | Sinkage ×, Earth mass-matched | Soil |",
+              "|---|---|---|---|---|"]
+        for body, m in rb.items():
+            d = m["deltas"]["earth_mass_matched"]
+            L.append(f"| {body} | {_f(m['cases']['target']['slope_limit_deg'], 1)}° | {_f(d['d_slope_limit_deg'], 1)}° | "
+                     f"×{_f(d['sinkage_ratio'], 2)} | {m['soil']['name']}{' — REUSED for Mars' if m['soil_reused_from_moon'] else ''} |")
+        notes = [m["soil_note"] for m in rb.values() if m.get("soil_note")]
+        L += [""] + [f"* {n}." for n in notes] + [""]
     if v:
         L += ["## Validation", "", f"Population: {v['population']}. Draws: {v['draws']}.", "",
               "| Target | n positives | ROC AUC [90 % bootstrap] | AUC vs controls | recall@50 | precision@50 (chance) | seed ρ |",

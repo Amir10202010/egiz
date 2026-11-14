@@ -30,7 +30,7 @@ from pipeline.discovery.fingerprint import (
     target_fingerprint,
 )
 from pipeline.discovery.gaps import gap_ledger, ledger_summary
-from pipeline.discovery.rover import rover_experiment
+from pipeline.discovery.rover import body_rover_model, rover_experiment
 from pipeline.discovery.similarity import EarthTable, earth_geology_classes
 from pipeline.discovery.sites import BENCHMARK, TARGETS, benchmark_window
 
@@ -245,6 +245,8 @@ def build(draws: int = 64, write: bool = True) -> str:
         "aggregation": R.__doc__,
         "windows": cols,
         "targets": target_out,
+        # Window-independent rover terramechanics, once per body (see pipeline.discovery.rover).
+        "rover_body_level": {body: body_rover_model(body) for body in sorted({t.body for t in targets})},
         "unavailable_targets": unavailable,
         "benchmark_sites": [b.to_dict() for b in BENCHMARK],
         "reproduce": ["python -m pipeline.discovery acquire --set global --set kz --set benchmark --set targets",

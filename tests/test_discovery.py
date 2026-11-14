@@ -223,6 +223,55 @@ def test_rover_experiment_on_candidate_terrain():
     assert rover_experiment(_window(), "mars") is None
 
 
+def test_rover_levels_body_vs_window():
+    """Slope limit and sinkage are body-level (same for every window); traversability/energy are window-level."""
+    from pipeline.discovery.rover import (
+        BODY_LEVEL_KEYS,
+        WINDOW_LEVEL_KEYS,
+        body_rover_model,
+        rover_experiment,
+    )
+    flat = _window(**_stats(2, 6, 0.97, 1.0, 0.8, 0.18, 0.02))
+    rough = _window(**_stats(12, 25, 0.4, 0.75, 0.15, 0.4, 0.35))
+    for body in ("moon", "mars"):
+        a, b, m = rover_experiment(flat, body), rover_experiment(rough, body), body_rover_model(body)
+        assert a["levels"]["body"] == list(BODY_LEVEL_KEYS) and a["levels"]["window"] == list(WINDOW_LEVEL_KEYS)
+        assert not set(BODY_LEVEL_KEYS) & set(WINDOW_LEVEL_KEYS)
+        for case in ("target", "earth_load_matched", "earth_mass_matched"):
+            for k in ("slope_limit_deg", "sinkage_mm"):  # identical across windows and equal to the body model
+                assert a["cases"][case][k] == b["cases"][case][k] == m["cases"][case][k]
+            for k in ("traversable_frac", "climbing_energy_j_per_m"):
+                assert k not in m["cases"][case]  # window-level quantities never in the body block
+        for key in ("earth_load_matched", "earth_mass_matched"):
+            for k in ("d_slope_limit_deg", "sinkage_ratio"):
+                assert a["deltas"][key][k] == b["deltas"][key][k] == m["deltas"][key][k]
+        assert a["cases"]["target"]["traversable_frac"] != b["cases"]["target"]["traversable_frac"]
+        assert m["label"] == "body-level, model estimate"
+    # Mars reuses the lunar soil, and every Mars output says so.
+    mars, moon = body_rover_model("mars"), body_rover_model("moon")
+    assert mars["soil"] == moon["soil"] and "lunar" in mars["soil"]["name"].lower()
+    assert mars["soil_reused_from_moon"] is True and "LUNAR" in mars["soil_note"]
+    assert moon["soil_reused_from_moon"] is False and moon["soil_note"] is None
+    ex = rover_experiment(flat, "mars")
+    assert ex["soil_reused_from_moon"] is True and any("REUSED" in s for s in ex["assumptions"])
+
+
+def test_gap_ledger_rover_rows_are_body_level():
+    from pipeline.discovery.fingerprint import Target
+    from pipeline.discovery.gaps import gap_ledger
+    from pipeline.discovery.rover import body_rover_model
+    spec = next(t for t in S.TARGETS if t.body == "mars")
+    tw = _window()
+    target = Target(spec, tw, 200)
+    r1 = {r["key"]: r for r in gap_ledger(target, _window(elev_p50_m=100.0))}
+    r2 = {r["key"]: r for r in gap_ledger(target, _window(elev_p50_m=3000.0))}
+    m = body_rover_model("mars")
+    for key, field in (("rover_slope_limit", "slope_limit_deg"), ("rover_sinkage", "sinkage_mm")):
+        assert r1[key]["target_value"] == r2[key]["target_value"] == round(m["cases"]["target"][field], 2)
+        assert r1[key]["earth_value"] == r2[key]["earth_value"] == round(m["cases"]["earth_mass_matched"][field], 2)
+        assert "body-level" in r1[key]["note"] and "LUNAR" in r1[key]["note"]
+
+
 # ----------------------------------------------------------------------------- validation metric
 
 def test_auc():
