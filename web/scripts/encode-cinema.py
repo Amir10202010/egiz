@@ -20,7 +20,7 @@ import os
 SRC = pathlib.Path(os.environ['EGIZ_MASTERS']) if os.environ.get('EGIZ_MASTERS') else ROOT / 'media-src' / 'cinematic'
 OUT = ROOT / 'public' / 'media' / 'cinematic'
 CLIPS = {  # name: (group, scrubbed)
-    's1-arrival': ('hero', False), 's2-twin': ('earth', True),
+    's1-arrival': ('hero', True), 's2-twin': ('earth', True), 's3-return': ('moon', True),
     's4-passage': ('transitions', True), 's5-jezero': ('mars', True), 's6-answer': ('missions', True),
     's7-home': ('orbital', True),
 }
