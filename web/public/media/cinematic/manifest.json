@@ -1,0 +1,18 @@
+{
+  "schema": "egiz.cinema",
+  "version": "1.0.0",
+  "note": "Illustrative footage for the landing page. Prompts and specs: docs/cinematic/SCENES.md. The page probes each 'base' for .webm/.mp4 (video) and .jpg (still/poster); a scene with neither is skipped. 'window' is in landing chapter units (chapter index + progress). Modes: 'plate' covers the live world; 'handoff' plays once, then dissolves into the live world; 'inline' is placed by its own section.",
+  "scenes": [
+    { "id": "EGZ-01", "name": "First Light", "group": "hero", "base": "hero/egz01-first-light", "mode": "handoff", "window": [0, 0.5], "loop": false, "focus": "62% 50%", "role": "Hero opening film over the lunar south pole; dissolves into the live measured Moon.", "status": "planned" },
+    { "id": "EGZ-02", "name": "The Twin", "group": "earth", "base": "earth/egz02-the-twin", "mode": "plate", "window": [0.86, 1.3], "loop": false, "focus": "62% 50%", "role": "Chapter 1 opening: the Earth stand-in, framed like the Moon shot; hands off to the live probe.", "status": "planned" },
+    { "id": "EGZ-03", "name": "Shadow Tide", "group": "moon", "base": "moon/egz03-shadow-tide", "mode": "plate", "window": [1.86, 2.3], "loop": true, "focus": "40% 50%", "role": "Chapter 2 opening: a polar day in time-lapse; hands off to the live plateau and the draggable Sun.", "status": "planned" },
+    { "id": "EGZ-05", "name": "Through the Dust", "group": "transitions", "base": "transitions/egz05-through-the-dust", "mode": "plate", "window": [2.58, 3.02], "loop": false, "focus": "50% 50%", "role": "Passage from the Moon to Mars.", "status": "planned" },
+    { "id": "EGZ-06", "name": "Delta at Dusk", "group": "mars", "base": "mars/egz06-delta-at-dusk", "mode": "plate", "window": [3.02, 3.5], "loop": false, "focus": "55% 50%", "role": "Chapter 3: Jezero at sunset, pure cinema.", "status": "planned" },
+    { "id": "EGZ-07", "name": "The Procession", "group": "mars", "base": "mars/egz07-the-procession", "mode": "plate", "window": [3.5, 3.97], "loop": true, "focus": "55% 50%", "role": "Chapter 3 close: dust devils, the atmosphere no Earth twin has.", "status": "planned" },
+    { "id": "EGZ-08", "name": "The Pointing", "group": "missions", "base": "missions/egz08-the-pointing", "mode": "inline", "window": [0, 0], "loop": false, "focus": "50% 50%", "role": "Opens the Same Ground chapter: a hand points at Mars and the map answers with Earth.", "status": "planned" },
+    { "id": "EGZ-09", "name": "Ten Thousand Grounds", "group": "orbital", "base": "orbital/egz09-ten-thousand-grounds", "mode": "plate", "window": [4.02, 4.3], "loop": false, "focus": "50% 50%", "role": "Chapter 4 opening: Earth's deserts at dawn from orbit; hands off to the live fidelity field.", "status": "planned" },
+    { "id": "EGZ-04", "name": "The Bootprint", "group": "moon", "base": "moon/egz04-bootprint", "mode": "plate", "window": [5.0, 5.3], "loop": false, "focus": "58% 50%", "role": "Chapter 5 opening: vacuum in one image; hands off to the live limits ledger.", "status": "planned" },
+    { "id": "EGZ-10", "name": "First Tracks", "group": "missions", "base": "missions/egz10-first-tracks", "mode": "plate", "window": [6.0, 6.26], "loop": false, "focus": "65% 50%", "role": "Chapter 6 opening: departure; hands off to the live mission planner.", "status": "planned" },
+    { "id": "EGZ-11", "name": "The Thin Line", "group": "orbital", "base": "orbital/egz11-the-thin-line", "mode": "plate", "window": [6.9, 8.2], "loop": false, "focus": "50% 60%", "role": "Finale: the Moon rising through Earth's atmosphere.", "status": "planned" }
+  ]
+}
