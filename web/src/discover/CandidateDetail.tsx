@@ -131,7 +131,7 @@ export function CandidateDetail(p: DetailProps) {
         <h3><FlaskConical size={15} /> {t('Rover experiment')} <small>— {t('model estimate')}</small></h3>
         {c.rover ? <RoverTable ex={c.rover} bodyModel={bundle.rover_body_level?.[target.body]} /> : <p className="dc-muted">{t('No 100 m slope distribution for this window.')}</p>}
         <div className="dc-links">
-          <button className="eg-button eg-button-ghost" onClick={() => navigate('lab')}>{t('Open Mission Lab')}</button>
+          <button className="eg-button eg-button-ghost" onClick={() => navigate('lab')}>{t('Test it in Mission Lab')}</button>
           <button className="eg-button eg-button-ghost" onClick={() => navigate(target.body === 'mars' ? 'astral' : 'studio')}><Mountain size={15} />{target.body === 'mars' ? t('Jezero world (ASTRAL)') : t('Lunar 5 m world')}</button>
           {hasWorld && <button className="eg-button eg-button-ghost" onClick={() => { window.location.hash = `#/astral?world=${worldDir}`; }}><Mountain size={15} />{t('This window in 3D (ASTRAL)')}</button>}
         </div>

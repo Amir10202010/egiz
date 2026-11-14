@@ -6,7 +6,9 @@ import { DataModePicker } from './DataModePicker';
 import { DataNotes } from './DataNotes';
 import copy from '../content/copy.json';
 
-const links: Route[] = ['discover', 'astral', 'studio', 'lab', 'campaign', 'atlas', 'evidence', 'twin'];
+// Primary judge path: Discover. Everything else is a research tool.
+const primary: Route[] = ['discover'];
+const tools: Route[] = ['lab', 'astral', 'studio', 'atlas', 'campaign', 'matrix', 'twin', 'evidence', 'brief'];
 
 /** EGIZ mark: a horizon line under a partial orbit — Earth, before elsewhere. */
 export function EgizMark() {
@@ -53,9 +55,15 @@ export function SiteHeader({ availableModes }: { availableModes: DataMode[] }) {
   return <header className={classes}>
     <button className="eg-wordmark brand" aria-label={t('Egiz campaign home')} onClick={() => navigate('home')}><EgizMark /><strong>{copy.brand.name}</strong></button>
     <nav id="primary-navigation" className={`eg-nav ${menuOpen ? 'open' : ''}`} aria-label={t('Main navigation')}>
-      {links.map((r, i) => <button key={r} aria-current={route === r ? 'page' : undefined} className={route === r ? 'active' : ''} onClick={() => { navigate(r); setMenuOpen(false); }}>
+      {primary.map((r, i) => <button key={r} aria-current={route === r ? 'page' : undefined} className={route === r ? 'active' : ''} onClick={() => { navigate(r); setMenuOpen(false); }}>
         <span className="eg-nav-index" aria-hidden="true">{String(i + 1).padStart(2, '0')}</span>{t(copy.nav[r as keyof typeof copy.nav])}
       </button>)}
+      <details className="eg-nav-tools" open={menuOpen || undefined}>
+        <summary className={tools.includes(route) ? 'active' : ''}>{t('Research tools')}</summary>
+        <div className="eg-nav-tools-list">{tools.map(r => <button key={r} aria-current={route === r ? 'page' : undefined} className={route === r ? 'active' : ''} onClick={e => { navigate(r); setMenuOpen(false); (e.currentTarget.closest('details') as HTMLDetailsElement | null)?.removeAttribute('open'); }}>
+          {t(copy.nav[r as keyof typeof copy.nav])}
+        </button>)}</div>
+      </details>
     </nav>
     <div className="eg-header-tools header-right">
       <DataModePicker available={availableModes} compact />

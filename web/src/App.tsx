@@ -7,6 +7,7 @@ import { dataModeInfo, type DataMode } from './data/modes';
 import { useAppStore } from './state/store';
 import { useLiveCampaign } from './lib/useLiveCampaign';
 import { SkipLink } from './components/SkipLink';
+import { ScopeNote } from './components/ScopeNote';
 import { DataModePicker } from './components/DataModePicker';
 import copy from './content/copy.json';
 import { SiteHeader, EgizMark } from './components/SiteHeader';
@@ -37,6 +38,7 @@ function Workspace({ availableModes }: { availableModes: DataMode[] }) {
   useEffect(() => { document.documentElement.dataset.route = route; }, [route]);
   if (route === 'astral') return <Suspense fallback={<main className="page eg-loading"><span className="eg-loading-bar" aria-hidden="true" /><h1>{localizeText("Loading Mission Studio…")}</h1></main>}><MissionStudio /></Suspense>;
   return <><SkipLink /><SiteHeader availableModes={availableModes} />
+    {route !== 'home' && <ScopeNote route={route} />}
     <div id="main-content" className={`focused-workspace route-${route}`} tabIndex={-1}>{localizeText(route === 'home' ? <HomePage /> : route === 'lab' ? <Suspense fallback={<main className="page eg-loading"><span className="eg-loading-bar" aria-hidden="true" /><h1>{localizeText("Loading Mission Lab…")}</h1></main>}><MissionLab model={model} /></Suspense> : route === 'studio' ? <Suspense fallback={<main className="page eg-loading"><span className="eg-loading-bar" aria-hidden="true" /><h1>{localizeText("Loading Mission Studio…")}</h1></main>}><AstralStudio /></Suspense> : route === 'discover' ? <Suspense fallback={<main className="page eg-loading"><span className="eg-loading-bar" aria-hidden="true" /><h1>{localizeText("Loading the Earth-wide index…")}</h1></main>}><DiscoverPage /></Suspense> : route === 'atlas' ? <Suspense fallback={<main className="page eg-loading"><span className="eg-loading-bar" aria-hidden="true" /><h1>{localizeText("Loading ATLAS-Π…")}</h1></main>}><AtlasLab /></Suspense> : <Suspense fallback={<main className="page eg-loading"><span className="eg-loading-bar" aria-hidden="true" /></main>}>{route === 'brief' ? <BriefPage /> : route === 'matrix' ? <MatrixPage model={model} /> : route === 'evidence' ? <EvidencePage /> : route === 'twin' ? <TwinPage /> : <CampaignPage model={model} />}</Suspense>)}</div>
     {route !== 'home' && route !== 'studio' && <Suspense fallback={null}><InterfaceGuide route={route}/></Suspense>}
     {localizeText(selectedSite && route !== 'home' && <Suspense fallback={null}><SiteDrawer model={model} /></Suspense>)}
