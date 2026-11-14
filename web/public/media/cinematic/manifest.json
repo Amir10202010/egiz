@@ -1,20 +1,20 @@
 {
   "schema": "egiz.cinema",
-  "version": "2.1.0",
-  "note": "ONE SHOT: seven 8-second Veo 3.1 clips chained end-frame to start-frame. Prompts: docs/cinematic/SCENES.md. The page probes each 'base' for .webm/.mp4 (video) and .jpg (still); a scene with neither is skipped. 'window' is in landing chapter units (chapter index + progress). Modes: 'handoff' plays once then dissolves into the live world; 'scrub' ties the frame to the scroll position; 'inline' clips play in order inside the Same Ground chapter.",
+  "version": "3.0.0",
+  "note": "ONE SHOT. S1–S5 are Act I, the opening film (mode 'film'): S1 plays on arrival, S2–S5 are scrubbed by the scroll; S6 opens the Same Ground chapter (inline); S7 is the finale (scrub, window in chapter units). Renditions: <base>-1080.mp4 / -720.mp4, posters <base>.jpg and <base>-end.jpg, produced by web/scripts/encode-cinema.py from 4K masters in web/media-src/cinematic. Prompts: docs/cinematic/SCENES.md.",
   "scenes": [
     {
       "id": "S1",
       "name": "Arrival",
       "group": "hero",
       "base": "hero/s1-arrival",
-      "mode": "handoff",
+      "mode": "film",
       "window": [
         0,
-        0.5
+        0
       ],
       "loop": false,
-      "focus": "62% 50%",
+      "focus": "60% 50%",
       "role": "Hero: from black space to the lunar south pole; dissolves into the live measured Moon.",
       "status": "planned"
     },
@@ -23,13 +23,13 @@
       "name": "The Twin",
       "group": "earth",
       "base": "earth/s2-twin",
-      "mode": "scrub",
+      "mode": "film",
       "window": [
-        0.5,
-        1.12
+        0,
+        0
       ],
       "loop": false,
-      "focus": "62% 50%",
+      "focus": "64% 50%",
       "role": "Into chapter 1: lunar craters become a Death Valley salt pan in one move.",
       "status": "planned"
     },
@@ -38,13 +38,13 @@
       "name": "Return",
       "group": "moon",
       "base": "moon/s3-return",
-      "mode": "scrub",
+      "mode": "film",
       "window": [
-        1.5,
-        2.1
+        0,
+        0
       ],
       "loop": false,
-      "focus": "40% 50%",
+      "focus": "55% 50%",
       "role": "Into chapter 2: the sky drains to black, back on a lunar crater rim.",
       "status": "planned"
     },
@@ -53,10 +53,10 @@
       "name": "Passage",
       "group": "transitions",
       "base": "transitions/s4-passage",
-      "mode": "scrub",
+      "mode": "film",
       "window": [
-        2.5,
-        3.1
+        0,
+        0
       ],
       "loop": false,
       "focus": "50% 50%",
@@ -68,13 +68,13 @@
       "name": "Jezero",
       "group": "mars",
       "base": "mars/s5-jezero",
-      "mode": "scrub",
+      "mode": "film",
       "window": [
-        3.1,
-        3.97
+        0,
+        0
       ],
       "loop": false,
-      "focus": "55% 50%",
+      "focus": "68% 50%",
       "role": "Chapter 3: the delta at the blue sunset, pure cinema.",
       "status": "planned"
     },
@@ -89,7 +89,7 @@
         0
       ],
       "loop": false,
-      "focus": "55% 50%",
+      "focus": "70% 50%",
       "role": "Opens the Same Ground chapter: the same camera over the same ground, Mars turns into its Earth twin (Iceland-like black sand and layered lava cliffs). Then the live comparison.",
       "status": "planned"
     },
@@ -104,7 +104,7 @@
         7.95
       ],
       "loop": false,
-      "focus": "50% 60%",
+      "focus": "50% 50%",
       "role": "Finale: from the Earth twin straight up through the clouds to orbit, the Moon above the limb.",
       "status": "planned"
     }
