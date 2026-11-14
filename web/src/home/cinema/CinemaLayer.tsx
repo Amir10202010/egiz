@@ -37,7 +37,15 @@ export const CinemaLayer = forwardRef<CinemaHandle, { lang: Lang; onAssets?: (a:
       el.dataset.on = String(alpha > .5);
       cover = Math.max(cover, alpha);
       const v = vids.current.get(a.id);
-      if (v) {
+      if (v && a.mode === 'scrub') {
+        // the scroll position is the frame: the camera moves exactly as far as the visitor scrolls
+        if (c > a.window[0] - .4 && c < a.window[1] + .1 && v.preload !== 'auto') { v.preload = 'auto'; v.load(); }
+        if (!v.paused) v.pause();
+        if (v.readyState >= 1 && v.duration) {
+          const t = Math.min(1, Math.max(0, (c - a.window[0]) / (a.window[1] - a.window[0]))) * (v.duration - .04);
+          if (Math.abs(v.currentTime - t) > 1 / 40) v.currentTime = t;
+        }
+      } else if (v) {
         const near = c > a.window[0] - .4 && c < a.window[1] + .1;
         if (near && v.preload !== 'auto') { v.preload = 'auto'; v.load(); }
         if (alpha > .02 && !(a.mode === 'handoff' && ended.current.has(a.id))) { if (v.paused) v.play().catch(() => {}); }
@@ -57,7 +65,8 @@ export const CinemaLayer = forwardRef<CinemaHandle, { lang: Lang; onAssets?: (a:
   return <div className="cn-layer" aria-hidden="true">
     {plates.map(a => <div key={a.id} ref={el => { if (el) els.current.set(a.id, el); else els.current.delete(a.id); }} className={`cn-plate cn-${a.mode}`} style={{ opacity: 0 }}>
       {useVideo(a)
-        ? <video ref={v => { if (v) vids.current.set(a.id, v); else vids.current.delete(a.id); }} muted playsInline loop={a.loop} preload={a.window[0] <= 0 ? 'auto' : 'none'} autoPlay={a.window[0] <= 0}
+        ? <video ref={v => { if (v) vids.current.set(a.id, v); else vids.current.delete(a.id); }} muted playsInline loop={a.loop && a.mode !== 'scrub'} preload={a.window[0] <= 0 ? 'auto' : 'none'} autoPlay={a.window[0] <= 0 && a.mode !== 'scrub'}
+            onLoadedMetadata={() => apply(last.current)}
             poster={a.still ?? undefined} style={{ objectPosition: a.focus }}
             onEnded={() => { if (a.mode === 'handoff') { ended.current.add(a.id); apply(last.current); } }}>
             {a.sources.map(s => <source key={s.src} src={s.src} type={s.type} />)}

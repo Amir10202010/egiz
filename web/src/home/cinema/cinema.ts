@@ -2,7 +2,9 @@
 // Nothing is assumed: a scene shows only when its video or still is really on the server.
 // AI-assisted implementation; human review pending.
 
-export type CinemaMode = 'plate' | 'handoff' | 'inline';
+/** plate: plays over the world · handoff: plays once, then dissolves into the live world ·
+ *  scrub: the scroll position IS the frame · inline: placed by its own section */
+export type CinemaMode = 'plate' | 'handoff' | 'scrub' | 'inline';
 export interface CinemaScene {
   id: string; name: string; group: string; base: string; mode: CinemaMode;
   window: [number, number]; loop: boolean; focus: string; role: string; status: string;

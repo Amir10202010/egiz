@@ -383,7 +383,7 @@ export function HomePage() {
     </section>}
 
     {/* Same ground, two planets: point at Mars, Earth answers */}
-    <MatchChapter data={data} lang={lang} synthetic={synthetic} film={films.find(f => f.id === 'EGZ-08')} onCover={onMatchCover} />
+    <MatchChapter data={data} lang={lang} synthetic={synthetic} films={films.filter(f => f.mode === 'inline')} onCover={onMatchCover} />
 
     {/* 04 — Method */}
     <section data-chapter="4" className="wd-ch wd-ch-long" aria-labelledby="hm-method">

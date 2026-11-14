@@ -47,7 +47,27 @@ function PlanetMap({ img, lat, lon, zoom, focus, children, label }: { img: strin
   </div>;
 }
 
-export function MatchChapter({ data, lang, film, synthetic, onCover }: { data: AppData; lang: Lang; film?: CinemaAsset; synthetic: boolean; onCover?: (v: boolean) => void }) {
+/** The pointing (S6) and the answer (S7) play back to back when the reel scrolls into view, as one shot. */
+function FilmReel({ films, lang }: { films: CinemaAsset[]; lang: Lang }) {
+  const [i, setI] = useState(0);
+  const host = useRef<HTMLDivElement>(null);
+  const vid = useRef<HTMLVideoElement>(null);
+  const film = films[Math.min(i, films.length - 1)];
+  useEffect(() => {
+    const el = host.current; if (!el || typeof IntersectionObserver === 'undefined') return;
+    const io = new IntersectionObserver(([e]) => { const v = vid.current; if (!v) return; if (e.isIntersecting && e.intersectionRatio > .55) v.play().catch(() => {}); else v.pause(); }, { threshold: [0, .55, 1] });
+    io.observe(el); return () => io.disconnect();
+  }, []);
+  useEffect(() => { vid.current?.load(); if (i > 0) vid.current?.play().catch(() => {}); }, [i]);
+  return <div ref={host} className="mt-film">
+    {film.sources.length
+      ? <video ref={vid} key={film.id} muted playsInline preload="metadata" poster={film.still ?? undefined} style={{ objectPosition: film.focus }} onEnded={() => setI(n => Math.min(n + 1, films.length - 1))}>{film.sources.map(s => <source key={s.src} src={s.src} type={s.type} />)}</video>
+      : <img src={film.still!} alt="" style={{ objectPosition: film.focus }} />}
+    <span className="mt-film-credit">{film.id} · {L(lang, 'illustrative film', 'иллюстративный кадр')}</span>
+  </div>;
+}
+
+export function MatchChapter({ data, lang, films, synthetic, onCover }: { data: AppData; lang: Lang; films: CinemaAsset[]; synthetic: boolean; onCover?: (v: boolean) => void }) {
   const targets = useMemo(() => {
     const pick = (body: 'mars' | 'moon') => data.targets.targets.find(t => t.body === body && t.kind !== 'validation_only') ?? data.targets.targets.find(t => t.body === body);
     return [pick('mars'), pick('moon')].filter(Boolean) as Target[];
@@ -111,12 +131,7 @@ export function MatchChapter({ data, lang, film, synthetic, onCover }: { data: A
   const objectives = template?.objectives ?? [];
 
   return <section ref={root} className="mt" data-stage={shown} aria-labelledby="mt-title">
-    {film && <div className="mt-film">
-      {film.sources.length
-        ? <video muted playsInline autoPlay loop={false} preload="metadata" poster={film.still ?? undefined} style={{ objectPosition: film.focus }}>{film.sources.map(s => <source key={s.src} src={s.src} type={s.type} />)}</video>
-        : <img src={film.still!} alt="" style={{ objectPosition: film.focus }} />}
-      <span className="mt-film-credit">{film.id} · {L(lang, 'illustrative film', 'иллюстративный кадр')}</span>
-    </div>}
+    {films.length > 0 && <FilmReel films={films} lang={lang} />}
 
     <div className="mt-frame">
       <header className="mt-head">

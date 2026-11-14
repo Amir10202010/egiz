@@ -71,10 +71,11 @@ No other space website can use that device honestly, because the device *is* the
 
 ## 6. Rhythm of the film
 
-The order alternates scale so the page breathes:
+One continuous 64-second shot in eight 8-second Veo 3.1 clips, chained frame to frame (see
+[SCENES.md](SCENES.md)):
 
-`MONUMENTAL (01) → TWIN (02) → SLOW TIME (03) → PASSAGE (05) → VAST (06) → MONUMENTAL (07) →
-INTIMATE HUMAN (08) → PLANETARY (09) → INTIMATE MACRO (04) → DEPARTURE (10) → HOME (11)`
+`ARRIVAL (vast) → THE TWIN (recognition) → RETURN (silence) → PASSAGE (speed) → JEZERO (beauty) →
+THE POINTING (a human hand) → THE ANSWER (the match) → HOME (orbit)`
 
 ## 7. How footage meets the page
 
