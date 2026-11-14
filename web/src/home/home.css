@@ -8,7 +8,9 @@
 .wd-stage { position: fixed; inset: 0; z-index: 0; background: #000; }
 .wd-canvas { width: 100%; height: 100%; display: block; opacity: 0; transition: opacity 1.6s ease; }
 .wd-ready .wd-canvas { opacity: 1; }
-.wd-stage.is-fallback { background: #000 url('/hero/moon-south-pole-1440.jpg') 70% 50% / cover no-repeat; }
+.wd-stage.is-fallback, .wd-stage.is-poster { background: #000 url('/hero/moon-south-pole-1440.jpg') 70% 50% / cover no-repeat; }
+@media (max-aspect-ratio: 4/5) { .wd-stage.is-fallback, .wd-stage.is-poster { background-image: url('/hero/moon-south-pole-portrait-1080.jpg'); background-position: 50% 50%; } }
+.wd-ready .wd-stage.is-poster { background: #000; transition: background-color 1.6s ease; }
 .wd-stage.is-fallback::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, rgba(0,0,0,.75), rgba(0,0,0,.2) 60%), linear-gradient(0deg, rgba(0,0,0,.8), transparent 40%); }
 .wd > section { position: relative; z-index: 1; }
 

@@ -9,9 +9,18 @@ export interface StageApi {
   stage: StageData | null;
 }
 
+/** Phones with little memory or few cores get the static poster: the world shader is desktop-class work. */
+export function isLowEndDevice() {
+  if (typeof window === 'undefined' || typeof navigator === 'undefined') return false;
+  const compact = Math.min(window.innerWidth, window.innerHeight) < 600 || !!window.matchMedia?.('(pointer: coarse)').matches;
+  const mem = (navigator as Navigator & { deviceMemory?: number }).deviceMemory, cores = navigator.hardwareConcurrency;
+  return compact && ((mem != null && mem <= 4) || (cores != null && cores <= 4));
+}
+
 export function canRenderWorld() {
   if (typeof window === 'undefined' || typeof navigator === 'undefined') return false;
   if (/jsdom/i.test(navigator.userAgent)) return false;
+  if (isLowEndDevice()) return false;
   try { const c = document.createElement('canvas'); return !!c.getContext('webgl2'); } catch { return false; }
 }
 
@@ -46,6 +55,10 @@ export function WorldStage({ analogues, shots, labels, apiRef, onProbe, onReady,
       apiRef.current = { engine, stage };
       if (import.meta.env.DEV) (window as unknown as { __wd: unknown }).__wd = engine;
       engine.setLabels(labels(stage, engine));
+      engine.onTooSlow = () => { engine?.dispose(); engine = null; apiRef.current = { engine: null, stage }; setFailed(true); onReady(false); };
+      // Shaders compile off the main thread; the static poster stays until the first frame is ready.
+      try { await engine.start(); } catch { setFailed(true); onReady(false); return; }
+      if (disposed) return;
       onReady(true);
     })();
     return () => { disposed = true; controller.abort(); engine?.dispose(); apiRef.current = { engine: null, stage: null }; };
@@ -76,7 +89,7 @@ export function WorldStage({ analogues, shots, labels, apiRef, onProbe, onReady,
     };
   }, [apiRef]);
 
-  return <div className={`wd-stage ${failed ? 'is-fallback' : ''}`} aria-hidden="true">
+  return <div className={`wd-stage ${failed ? 'is-fallback' : 'is-poster'}`} aria-hidden="true">
     {!failed && <canvas ref={canvas} className="wd-canvas" />}
   </div>;
 }

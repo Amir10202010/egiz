@@ -156,12 +156,14 @@ export function HomePage() {
       frame = 0;
       const sections = Array.from(host.querySelectorAll<HTMLElement>('[data-chapter]'));
       const y = window.scrollY, vh = window.innerHeight; let c = 0;
-      sections.forEach((s, i) => {
-        const top = s.offsetTop, h = s.offsetHeight;
+      // Read every section's layout first, then write: interleaving forced a reflow per section per frame.
+      const boxes = sections.map(s => [s.offsetTop, s.offsetHeight] as const);
+      const fs = boxes.map(([top, h], i) => {
         const f = Math.min(1, Math.max(0, (y - top) / Math.max(1, h - vh * .15)));
-        s.style.setProperty('--p', f.toFixed(4));
         if (y >= top - 1) c = i + f;
+        return f;
       });
+      sections.forEach((s, i) => s.style.setProperty('--p', fs[i].toFixed(4)));
       api.current.engine?.setChapter(c);
       const a = Math.min(sections.length - 1, Math.round(c - .25)); setActive(prev => prev === a ? prev : a);
     };

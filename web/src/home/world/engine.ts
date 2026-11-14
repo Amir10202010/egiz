@@ -75,9 +75,9 @@ export class WorldEngine {
     this.renderer.setClearColor(0x000000, 1);
     this.renderer.toneMapping = THREE.NoToneMapping;
     this.renderer.outputColorSpace = THREE.LinearSRGBColorSpace;
-    this.quality = Math.min(window.devicePixelRatio || 1, 1.5);
     // phones and small tablets: same picture from a lighter setup (smaller bake, coarser grid, fewer boulders)
     const compact = Math.min(window.innerWidth, window.innerHeight) < 600 || window.matchMedia?.('(pointer: coarse)').matches;
+    this.quality = Math.min(window.devicePixelRatio || 1, compact ? 1 : 1.5);
 
     // ---------- Measured textures ----------
     const side = stage?.side ?? 2;
@@ -103,11 +103,12 @@ export class WorldEngine {
     albedo.needsUpdate = true; albedo.wrapS = albedo.wrapT = THREE.ClampToEdgeWrapping;
     const loader = new THREE.TextureLoader();
     const base = import.meta.env.BASE_URL;
-    const earthTex = loader.load(`${base}textures/earth.jpg`); const moonTex = loader.load(`${base}textures/moon.jpg`);
+    // Compact screens: 2048 px sky maps and 1024 px detail textures (lossless downsamples of the same sources).
+    const earthTex = loader.load(`${base}textures/earth${compact ? '-preview' : ''}.jpg`); const moonTex = loader.load(`${base}textures/moon${compact ? '-preview' : ''}.jpg`);
     for (const t of [earthTex, moonTex]) { t.wrapS = THREE.RepeatWrapping; t.anisotropy = 4; }
     const aniso = this.renderer.capabilities.getMaxAnisotropy();
     const detail = (name: string) => {
-      const t = loader.load(`${base}textures/terrain/${name}.webp`);
+      const t = loader.load(`${base}textures/terrain/${name}${compact ? '-1024' : ''}.webp`);
       t.wrapS = t.wrapT = THREE.RepeatWrapping; t.colorSpace = THREE.NoColorSpace; t.anisotropy = aniso;
       t.minFilter = THREE.LinearMipmapLinearFilter; t.magFilter = THREE.LinearFilter; t.generateMipmaps = true;
       return t;
@@ -132,15 +133,17 @@ export class WorldEngine {
       uReticle: { value: new THREE.Vector3() }, uReveal: { value: this.reduced ? 1 : 0 },
     };
     // ---------- Bake procedural relief once (per world, one channel each) ----------
+    const bakeJobs: { rt: THREE.WebGLRenderTarget; scene: THREE.Scene; material: THREE.ShaderMaterial; quad: THREE.Mesh }[] = [];
     const bake = (size: number, res: number, fine: number) => {
       const rt = new THREE.WebGLRenderTarget(res, res, { type: THREE.HalfFloatType, format: THREE.RGBAFormat, depthBuffer: false, generateMipmaps: true, minFilter: THREE.LinearMipmapLinearFilter, magFilter: THREE.LinearFilter, wrapS: THREE.ClampToEdgeWrapping, wrapT: THREE.ClampToEdgeWrapping });
       const m = new THREE.ShaderMaterial({ vertexShader: BAKE_VERT, fragmentShader: BAKE_FRAG, uniforms: { ...this.uT, uRect: { value: new THREE.Vector3(0, 0, size) }, uFine: { value: fine } } });
       const quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), m); const sc = new THREE.Scene(); sc.add(quad);
-      this.renderer.setRenderTarget(rt); this.renderer.render(sc, new THREE.Camera()); this.renderer.setRenderTarget(null);
-      m.dispose(); quad.geometry.dispose();
+      // Rendered in start(), after the shader has compiled off the main thread.
+      bakeJobs.push({ rt, scene: sc, material: m, quad });
       this.bakes.push(rt);
       return rt.texture;
     };
+    this.bakeJobs = bakeJobs;
     this.uT.uDetailNear.value = bake(22000, compact ? 2048 : 4096, 1);
     this.uT.uDetailFar.value = bake(120000, 2048, 0);
 
@@ -193,8 +196,49 @@ export class WorldEngine {
 
     this.resize();
     window.addEventListener('resize', this.resize);
-    this.loop();
+    document.addEventListener('visibilitychange', this.onVisibility);
   }
+
+  /**
+   * Compiles every program with KHR_parallel_shader_compile (renderer.compileAsync) before the first draw,
+   * so the large terrain shader no longer blocks the main thread for seconds, then bakes and starts the loop.
+   * The page shows the static poster until this resolves. Nothing drawn differs from a synchronous start.
+   */
+  async start(): Promise<void> {
+    const cam = new THREE.Camera();
+    for (const job of this.bakeJobs) await this.renderer.compileAsync(job.scene, cam);
+    for (const job of this.bakeJobs) {
+      this.renderer.setRenderTarget(job.rt); this.renderer.render(job.scene, cam); this.renderer.setRenderTarget(null);
+      job.material.dispose(); job.quad.geometry.dispose();
+    }
+    this.bakeJobs = [];
+    await this.renderer.compileAsync(this.scene, this.camera);
+    // Full-screen post passes compile on their first use; give them the same treatment.
+    const passScene = new THREE.Scene();
+    for (const pass of this.composer.passes as unknown as { fsQuad?: { material?: THREE.Material }; materialHighPassFilter?: THREE.Material; separableBlurMaterials?: THREE.Material[]; compositeMaterial?: THREE.Material; blendMaterial?: THREE.Material; materialEdges?: THREE.Material; materialWeights?: THREE.Material; materialBlend?: THREE.Material }[]) {
+      const mats = [pass.fsQuad?.material, pass.materialHighPassFilter, ...(pass.separableBlurMaterials ?? []), pass.compositeMaterial, pass.blendMaterial, pass.materialEdges, pass.materialWeights, pass.materialBlend];
+      for (const m of mats) if (m) passScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), m));
+    }
+    if (passScene.children.length) await this.renderer.compileAsync(passScene, cam);
+    passScene.traverse(o => { if (o instanceof THREE.Mesh) o.geometry.dispose(); });
+    if (this.disposed) return;
+    this.started = true; this.last = this.t0 = performance.now();
+    if (!document.hidden) this.loop();
+  }
+
+  private lastSig = '';
+  private bakeJobs: { rt: THREE.WebGLRenderTarget; scene: THREE.Scene; material: THREE.ShaderMaterial; quad: THREE.Mesh }[] = [];
+  private started = false; private disposed = false;
+  /** Set when the GPU cannot hold the scene even at the lowest resolution and without bloom. */
+  onTooSlow: (() => void) | null = null;
+  private slowSince = 0;
+
+  /** No frames while the tab is hidden; resume where the scroll left off. */
+  private onVisibility = () => {
+    if (!this.started || this.disposed) return;
+    if (document.hidden) { cancelAnimationFrame(this.raf); this.raf = 0; }
+    else if (!this.raf) { this.last = performance.now(); this.loop(); }
+  };
 
   // ---------- Inputs from the page ----------
   setChapter(c: number) { this.chapterTarget = c; }
@@ -378,7 +422,9 @@ export class WorldEngine {
     // airless ground blooms less: in vacuum there is no haze to carry the glow, so the sky stays black
     this.bloom.strength = mix(.1 + .14 * (earthAir + marsAir), .4, s.space);
 
-    this.composer.render(dt);
+    // Reduced motion: the scene is static between inputs, so draw only when the view or the inputs change.
+    const sig = this.reduced ? [this.chapter.toFixed(4), pt.x.toFixed(3), pt.y.toFixed(3), pt.down, this.probe.r.toFixed(1), this.gapFocus, this.sunDrag.toFixed(3), inLaunch.toFixed(3), this.canvas.clientWidth, this.canvas.clientHeight].join('|') : '';
+    if (!this.reduced || sig !== this.lastSig) { this.composer.render(dt); this.lastSig = sig; }
     this.updateLabels();
     this.onFrame?.(this.chapter);
   };
@@ -485,11 +531,19 @@ export class WorldEngine {
     const prev = this.scale;
     if (this.frameAvg > 24 && this.scale > .7) this.scale = Math.max(.7, this.scale - .1);
     else if (this.frameAvg < 14 && this.scale < 1) this.scale = Math.min(1, this.scale + .06);
+    // Frame time still above ~20 ms at the lowest resolution: drop the bloom pass (restored when it recovers).
+    if (this.scale <= .7 && this.frameAvg > 20) this.bloom.enabled = false;
+    else if (this.frameAvg < 13) this.bloom.enabled = true;
+    // A GPU that cannot hold ~15 fps even then for 5 s gets the static poster instead (WorldStage fallback).
+    if (this.scale <= .7 && !this.bloom.enabled && this.frameAvg > 66) { this.slowSince ||= now; if (now - this.slowSince > 5000) this.onTooSlow?.(); }
+    else this.slowSince = 0;
     if (prev !== this.scale) this.resize();
   }
 
   dispose() {
-    cancelAnimationFrame(this.raf); window.removeEventListener('resize', this.resize);
+    this.disposed = true;
+    cancelAnimationFrame(this.raf); window.removeEventListener('resize', this.resize); document.removeEventListener('visibilitychange', this.onVisibility);
+    for (const job of this.bakeJobs) { job.material.dispose(); job.quad.geometry.dispose(); }
     this.terrain.geometry.dispose(); this.terrain.material.dispose(); this.sky.geometry.dispose(); this.sky.material.dispose(); this.rocks.geometry.dispose(); this.rocks.material.dispose(); this.bakes.forEach(b => b.dispose());
     this.composer.dispose(); this.renderer.dispose();
   }
