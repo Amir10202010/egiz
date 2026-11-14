@@ -10,6 +10,7 @@ import { DiscoverMap } from './DiscoverMap';
 import { CandidateDetail, ComparePanel } from './CandidateDetail';
 import { CopilotPanel } from './CopilotPanel';
 import { IntervalBar } from './charts';
+import { KazakhstanPanel } from './KazakhstanPanel';
 import type { DiscoveryBundle, ScoreShard, TargetEntry, ValidationDoc, ValidationTarget } from './types';
 import './discover.css';
 
@@ -80,7 +81,8 @@ function Workspace({ bundle, validation }: { bundle: DiscoveryBundle; validation
   const [targetId, setTargetId] = useState(bundle.targets.find(x => x.id === init.target)?.id ?? bundle.targets.find(x => x.id === 'MARS_JEZERO')?.id ?? bundle.targets[0].id);
   const [profile, setProfile] = useState(init.profile && bundle.profiles[init.profile] ? init.profile : 'general');
   const [weights, setWeights] = useState<Record<string, number>>(() => ({ ...bundle.profiles[profile].weights }));
-  const [region, setRegion] = useState(REGIONS.some(r => r.id === init.region) ? init.region! : 'world');
+  const initRegion = init.region === 'kz' ? 'kaz' : init.region;  // #/discover?region=kz
+  const [region, setRegion] = useState(REGIONS.some(r => r.id === initRegion) ? initRegion! : 'world');
   const [rankBy, setRankBy] = useState<typeof RANK_BY[number][0]>('score');
   const [evidence, setEvidence] = useState<'all' | 'strong' | 'no_missing'>('all');
   const [diverse, setDiverse] = useState(true);
@@ -184,6 +186,7 @@ function Workspace({ bundle, validation }: { bundle: DiscoveryBundle; validation
       </section>
     </div>
 
+    {region === 'kaz' && <KazakhstanPanel target={target} onSelect={setSelected} />}
     {agg && shard && selIndex >= 0 && <CandidateDetail bundle={bundle} target={target} shard={shard} agg={agg} i={selIndex} rank={globalRank.get(selIndex) ?? 0}
       weights={weights} profile={profile} dimPct={dimPct} scorePct={scorePct} entry={entry} validation={validation}
       inCompare={compare.includes(selected!)} onCompare={() => toggleCompare(selected!)} onClose={() => setSelected(null)} />}

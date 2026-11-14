@@ -363,3 +363,22 @@ def test_earth_world_site_and_tiling(tmp_path):
     assert manifest["encoding"]["scale_m"] == 0.05 and manifest["encoding"]["image_px"] is None
     assert len(manifest["tiles"]) == 1 + 4 + 16 and manifest["site"]["body"] == "earth"
     assert max(t["max_m"] for t in manifest["tiles"]) == pytest.approx(1100, abs=15)
+
+
+def test_kz_refinement_lattice_is_separate_from_the_bundle():
+    from pipeline.discovery import refine as RF
+    from pipeline.discovery.sites import haversine_km
+    seeds = [{"window": "KZX_A", "lon": 54.5, "lat": 43.5}, {"window": "KZX_B", "lon": 65.0, "lat": 45.0}]
+    aois = RF.refine_aois(seeds)
+    assert len(aois) == 16 and len({a.aoi_id for a in aois}) == 16
+    assert all(a.pool == RF.POOL == "kz_refine" for a in aois)
+    for a in aois:
+        s = next(x for x in seeds if f"parent={x['window']}" in a.notes)
+        d = haversine_km((s["lon"], s["lat"]), (a.lon, a.lat))
+        assert 18 < d < 30  # 20 km edge or ~28 km diagonal neighbour
+    # refinement windows never enter the Earth-wide reference population
+    from pipeline.discovery.bundle import population_mask
+    from pipeline.discovery.fingerprint import Window
+    ws = [Window(a.aoi_id, "earth", a.pool, a.name, a.lon, a.lat, "L4_validated", "pass", "x", {}) for a in aois]
+    pop, _ = population_mask(ws + [Window("G", "earth", "global_lattice", "G", 0, 0, "L4_validated", "pass", "x", {})] * 200)
+    assert not pop[: len(ws)].any()

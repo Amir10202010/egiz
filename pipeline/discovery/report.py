@@ -102,6 +102,23 @@ def write_report() -> str:
             L.append(f"* {r['target']}: {abl}; AUC under weight perturbation p05/p50/p95 = "
                      f"{r['sensitivity']['auc_p05_p50_p95']}; top-10 Jaccard {r['sensitivity']['top10_jaccard_p05_p50_p95']}.")
         L += ["", "Caveats:", ""] + [f"* {c}" for c in v["caveats"]] + [""]
+    kz = OUT / "regions" / "kz.json"
+    if kz.exists():
+        r = json.loads(kz.read_text(encoding="utf-8"))
+        L += ["## Kazakhstan: coarse-to-fine refinement", "",
+              f"Around every Kazakhstan window in the Earth-wide top 100 of a Mars target, {r['n_refinement_windows']} "
+              f"neighbouring windows ({r['step_km']:g} km step) were acquired with the same stages and scored with the same "
+              f"code in a separate run (`python -m pipeline.discovery refine-*`, file `data/discovery/regions/kz.json`). "
+              "They are excluded from the reference population and from discovery.json, so nothing above changes.", "",
+              "| Target | Seeds | Refined beats seed | Best window | Score | Fidelity [90 %] | Earth pct | Would-be rank |",
+              "|---|---|---|---|---|---|---|---|"]
+        for t in r["targets"]:
+            e = t["top"][0]
+            L.append(f"| {t['target']} | {len(t['seeds'])} | {t['n_better_than_parent']} | `{e['window']}` "
+                     f"({'refined near ' + e['parent'] if e.get('parent') else 'index window'}) | {_f(e['score'])} | "
+                     f"{_f(e['fidelity'], 2)} [{_f(e['lo'], 2)}–{_f(e['hi'], 2)}] | {_f(e['score_percentile'], 1)} | "
+                     f"{e['rank_among_earth_windows']} |")
+        L += [""] + [f"* {n}" for n in r["notes"]] + [""]
     DOC.parent.mkdir(parents=True, exist_ok=True)
     DOC.write_text("\n".join(L) + "\n", encoding="utf-8")
     return str(DOC)

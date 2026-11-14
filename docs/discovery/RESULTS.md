@@ -283,3 +283,18 @@ Caveats:
 * AUC against the designated controls (forest, farmland, delta) is an easy test. The hard negative control (bare, arid, latitude-matched windows) is the more informative comparison.
 * recall@50 and precision@50 are low or zero for most targets: known analog sites rarely appear in the Earth-wide top 50, so a high AUC means 'ranked above typical land', not 'found the known analogs first'.
 
+## Kazakhstan: coarse-to-fine refinement
+
+Around every Kazakhstan window in the Earth-wide top 100 of a Mars target, 144 neighbouring windows (20 km step) were acquired with the same stages and scored with the same code in a separate run (`python -m pipeline.discovery refine-*`, file `data/discovery/regions/kz.json`). They are excluded from the reference population and from discovery.json, so nothing above changes.
+
+| Target | Seeds | Refined beats seed | Best window | Score | Fidelity [90 %] | Earth pct | Would-be rank |
+|---|---|---|---|---|---|---|---|
+| MARS_JEZERO | 18 | 14 | `KZR_E051.995_N44.293` (refined near KZX_E052.246_N44.113) | 0.419 | 0.54 [0.36–0.81] | 99.4 | 25 |
+| MARS_GALE | 18 | 12 | `KZR_E054.269_N43.349` (refined near KZX_E054.517_N43.529) | 0.371 | 0.47 [0.32–0.71] | 99.3 | 27 |
+| MARS_OXIA_PLANUM | 18 | 15 | `KZR_E054.227_N43.125` (refined near KZX_E053.981_N42.945) | 0.365 | 0.47 [0.31–0.69] | 99.8 | 10 |
+| MARS_UTOPIA_ZHURONG | 18 | 14 | `KZR_E065.959_N43.125` (refined near KZX_E065.959_N42.945) | 0.387 | 0.49 [0.33–0.74] | 99.4 | 26 |
+
+* Refinement windows are scored in a separate Monte Carlo run with the Earth-wide windows; ranks are 'would-be' ranks among Earth-wide windows of the same run and differ slightly from discovery.json ranks.
+* Nearest town and season are not in the data: shown as 'to be confirmed'.
+* Selection effect: the best of many neighbouring windows is expected to score higher partly by chance (measurement and Monte Carlo noise); a refined window beating its seed is a lead for field checks, not proof of a better analog.
+
