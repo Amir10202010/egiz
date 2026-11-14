@@ -61,7 +61,7 @@ vec2 craters(vec2 p, float cell, float density){
     float bowl = d < 1. ? pow(dd, 2.1) - 1. : 0.;
     bowl += sin(d * 34.) * .022 * (1. - age) * big * smoothstep(fl, fl + .15, d) * step(d, .97);
     float rk = (d - 1.) * mix(4.6, 2., age); float rim = exp(-rk * rk) * mix(.33, .12, age);
-    float apron = d > 1. ? exp(-(d - 1.) * 3.) * .08 * (1. - age) * (.6 + .8 * vnoise(dv * 26. / r)) : 0.;
+    float apron = d > 1. ? exp(-(d - 1.) * 3.) * .08 * (1. - age) * (.6 + .8 * vnoise(dv * 7. / r)) : 0.;
     float peak = big * step(age, .55) * exp(-d * d * 55.) * .5;
     h += depth * (bowl + rim + apron + peak);
     halo += (1. - age) * (1. - age) * (1. - age) * exp(-max(d - .85, 0.) * 2.4) * step(d, 2.8);
@@ -97,7 +97,8 @@ vec4 detailProc(vec2 p, vec4 m, float fine){
   vec4 h = vec4(0.);
   { // Moon: impact craters across four scales over gentle undulation
     float d = craters(p, 1150., .16).x + craters(p + 37., 430., .3).x + craters(p + 71., 165., .42).x * .9 + fbm(p * .0035, 4) * 6.;
-    d += (craters(p + 13., 62., .45).x * .8 + craters(p + 5., 24., .5).x * .6) * fine;
+    // finest relief stays above the bake's texel size (~5 m); smaller craters alias into speckle, so the detail maps carry them
+    d += (craters(p + 13., 62., .45).x * .8 + craters(p + 5., 140., .35).x * .35) * fine;
     h.x = d;
   }
   { // Mars: wind-carved ridges, a few old craters and sedimentary benches
@@ -193,7 +194,7 @@ float softShadowCoarse(vec3 p, vec3 L, float t0){
     vec3 q = p + L * t;
     if (q.y > 7000.) break;
     float d = q.y - coarseH(q.xz);
-    res = min(res, 16. * d / t);
+    res = min(res, 10. * d / t);
     if (res < -.2) break;
     t = t * 1.16 + 8.;
     if (t > 32000.) break;
@@ -268,7 +269,7 @@ float sunShadow(vec3 pos, vec3 L, vec4 w, float dist){
     for (int i = 0; i < 14; i++){
       vec3 q = pos + L * t;
       float d = q.y - heightW(q.xz, w, 1.);
-      res = min(res, 12. * d / t);
+      res = min(res, 7. * d / t);
       if (res < -.2) break;
       t = t * 1.42 + 1.;
     }
@@ -304,7 +305,7 @@ void main(){
   vec4 w = worldsAt(p);
   vec4 m = measured(p);
   float relH = dot(m, w);
-  float e = max(2.2, dist * .0011);
+  float e = max(6., dist * .0014);                       // at least one baked texel: no bilinear facets in the shading
   float h0 = heightW(p, w, lod), hx = heightW(p + vec2(e, 0.), w, lod), hz = heightW(p + vec2(0., e), w, lod);
   vec3 Nm = normalize(vec3(h0 - hx, e, h0 - hz));
   // measured-scale slope (what a traverse planner sees), independent of procedural relief
@@ -345,8 +346,9 @@ void main(){
   // Moon: highland regolith; fresh craters wear bright ejecta, steep walls expose brighter, less weathered rock.
   float halo = 0.;
   if (w.x > .001 && dist < 12000.) halo = craters(p + 37., 430., .3).y * .7 + craters(p + 71., 165., .42).y;
-  vec3 moonA = vec3(.118, .114, .108) * (1. + .2 * n1 + .08 * n2);
-  moonA = mix(moonA, vec3(.11, .112, .118), smoothstep(.1, .6, -n1) * .5);          // slightly cooler, more mature soil
+  vec3 moonA = vec3(.132, .118, .1) * (1. + .2 * n1 + .08 * n2);                     // warm-beige highland regolith
+  moonA = mix(moonA, vec3(.1, .106, .122), smoothstep(.05, .6, -n1) * .7);           // cooler, bluish mature soil in the lows
+  moonA = mix(moonA, vec3(.145, .122, .096), smoothstep(.35, .8, n2) * .35);         // faint brownish patches of iron-rich soil
   moonA *= (1. + .3 * fbm(p * .00045 + 3., 3)) * (1. + .6 * clamp(halo, 0., 1.) + .3 * steep);
   // Mars: oxidised dust on the flats, dark basaltic sand in hollows, banded sediments on slopes.
   float hollow = smoothstep(.1, -.45, fbm(p * .0011, 3) + (m.y - dot(measured(p + vec2(300., 0.)), vec4(0., 1., 0., 0.))) * .004);
@@ -381,7 +383,9 @@ void main(){
 
   // ---------- Lighting ----------
   float NL = max(dot(N, L), 0.);
-  float sh = NL > 0. ? sunShadow(pos + Nm * .4, L, w, dist) : 0.;
+  // shadow is decided by the landform, not the fine texture normal: no speckled terminator along crater rims
+  float sh = dot(Nm, L) > -.2 ? sunShadow(pos + Nm * .4, L, w, dist) : 0.;
+  sh *= smoothstep(-.2, .08, dot(Nm, L));
   float ao = (dist < 9000. ? heightAO(p, h0, w) : 1.) * mix(1., cav, .6);
   float mu = max(dot(N, V), .04);
   float phase = acos(clamp(dot(L, V), -1., 1.));
@@ -390,10 +394,12 @@ void main(){
   vec3 key = uSunCol * brdf * sh;
   vec3 skyUp = skyColor(normalize(vec3(0., 1., 0.) + L * .3), L, atmo) * (.85 * atmo.x + 1.1 * atmo.y);
   vec3 sky = skyUp * (.55 + .45 * N.y) * ao;
-  vec3 earthshine = vec3(.006, .008, .012) * atmo.z * ao;
+  vec3 earthshine = vec3(.009, .014, .026) * atmo.z * ao;
   // light reflected from the sunlit ground around this point: what keeps lunar shadows from going dead black
-  vec3 bounce = albedo * uSunCol * max(L.y, 0.) * (.26 * atmo.z + .4 * (atmo.x + atmo.y)) * (.55 - .45 * N.y) * ao;
-  vec3 col = albedo * (key + sky + earthshine) + albedo * bounce;
+  vec3 bounce = albedo * uSunCol * max(L.y, 0.) * (.36 * atmo.z + .4 * (atmo.x + atmo.y)) * (.55 - .45 * N.y) * ao;
+  // regolith scatters light many times: a faint, even fill that keeps crater floors from reading as holes
+  vec3 fill = uSunCol * max(L.y + .05, 0.) * .12 * atmo.z * ao;
+  vec3 col = albedo * (key + sky + earthshine + fill) + albedo * bounce;
   // salt and wet sand catch a soft sheen at grazing angles
   vec3 H = normalize(L + V);
   col += uSunCol * pow(max(dot(N, H), 0.), 60.) * .04 * w.z * (1. - smoothstep(10., 70., elevA)) * sh;
@@ -422,18 +428,22 @@ void main(){
   if (uFidelity > 0.) {
     // Local likeness between the analogue and its target: matching slope reads warm, mismatch stays dark.
     vec4 wt = vec4(w.z, w.w, w.x, w.y);
-    float ee = 120.;
-    float ht = dot(measured(p), wt), htx = dot(measured(p + vec2(ee, 0.)), wt), htz = dot(measured(p + vec2(0., ee)), wt);
-    float hax = dot(measured(p + vec2(ee, 0.)), w), haz = dot(measured(p + vec2(0., ee)), w);
-    vec3 Nt = normalize(vec3(ht - htx, ee, ht - htz));
-    float slopeA = degrees(acos(clamp(normalize(vec3(relH - hax, ee, relH - haz)).y, 0., 1.)));
-    float st = degrees(acos(clamp(Nt.y, 0., 1.)));
-    float like = exp(-abs(st - slopeA) / 3.);
-    float bandL = abs(fract(like * 6.) - .5);
-    vec3 heat = mix(vec3(.012, .013, .016), vec3(1., .58, .24), smoothstep(.15, .95, like));
+    // central differences at two baselines: a smooth field, free of the regional grid's posts
+    float diff = 0.;
+    for (int k = 0; k < 2; k++){
+      float ee = k == 0 ? 150. : 420.;
+      vec4 mx0 = measured(p - vec2(ee, 0.)), mx1 = measured(p + vec2(ee, 0.)), mz0 = measured(p - vec2(0., ee)), mz1 = measured(p + vec2(0., ee));
+      float st = degrees(atan(length(vec2(dot(mx1 - mx0, wt), dot(mz1 - mz0, wt))) / (2. * ee)));
+      float sa = degrees(atan(length(vec2(dot(mx1 - mx0, w), dot(mz1 - mz0, w))) / (2. * ee)));
+      diff += abs(st - sa) * (k == 0 ? .6 : .4);
+    }
+    float like = exp(-diff / 4.5);
+    float bandL = abs(fract(like * 5.) - .5);
+    vec3 heat = mix(vec3(.03, .085, .1), vec3(.16, .3, .3), smoothstep(.1, .45, like));       // mismatch: deep teal
+    heat = mix(heat, vec3(1., .62, .27), smoothstep(.4, .95, like));                          // likeness: warm amber
     float lum = dot(col, vec3(.3, .5, .2));
-    col = mix(col, vec3(lum) * .2 + heat * heat * (.3 + .6 * NL * sh), uFidelity * .9);
-    col += vec3(1., .8, .5) * (1. - smoothstep(0., fwidth(like * 6.) * 1.5, bandL)) * .05 * uFidelity;
+    col = mix(col, lum * .35 + heat * heat * (.35 + .75 * NL * sh) * (.7 + .3 * ao), uFidelity * .88);
+    col += vec3(1., .82, .55) * (1. - smoothstep(0., fwidth(like * 5.) * 1.2, bandL)) * .035 * uFidelity;
     if (uScan > -1.) {
       float sd = p.x - uScan;
       col += vec3(1., .78, .5) * exp(-sd * sd / 16000.) * .18 * uFidelity;
@@ -523,7 +533,9 @@ void main(){
   float dist = length(xz - c);
   float field = smoothstep(-.15, .45, fbm(xz * .0011 + aRock.w, 3));   // rocks gather in fields, as ejecta does
   vec4 w = worldsAt(xz);
-  float size = aRock.z * uRockScale * field * (1. - smoothstep(uTile * .32, uTile * .48, dist));
+  // boulders thin out with distance well before they shrink to a pixel or two (which reads as dirt, not rock)
+  float size = aRock.z * uRockScale * field * (1. - smoothstep(uTile * .16, uTile * .34, dist));
+  size *= smoothstep(.0, .9, aRock.z / max(1., dist * .004));
   // fewer, smaller clasts on Earth's vegetated or salt-covered ground
   size *= w.x + w.y * .9 + w.z * .5 + w.w * .8;
   vFade = size;
@@ -563,12 +575,12 @@ void main(){
   float s = 3.2;
   vec4 tx = texture(uTexRock, vWorld.zy / s), ty = texture(uTexRock, vWorld.xz / s), tz = texture(uTexRock, vWorld.xy / s);
   vec3 nx = vec3(0., tx.y * 2. - 1., tx.z * 2. - 1.), ny = vec3(ty.y * 2. - 1., 0., ty.z * 2. - 1.), nz = vec3(tz.y * 2. - 1., tz.z * 2. - 1., 0.);
-  vec3 N = normalize(N0 + (nx * bw.x + ny * bw.y + nz * bw.z) * .9);
+  vec3 N = normalize(N0 + (nx * bw.x + ny * bw.y + nz * bw.z) * .5);
   float cav = tx.w * bw.x + ty.w * bw.y + tz.w * bw.z;
   vec4 w = worldsAt(vWorld.xz);
   vec4 atmo = vec4(w.z + w.w, w.y, w.x, 0.) * (1. - uAtmo.w);
   float v = fract(vSeed * 13.7);
-  vec3 moonR = vec3(.105, .102, .098) * (.85 + .4 * v);
+  vec3 moonR = mix(vec3(.12, .108, .092), vec3(.095, .1, .112), fract(vSeed * 5.3)) * (.85 + .45 * v);
   vec3 marsR = mix(vec3(.22, .13, .09), vec3(.46, .27, .14), smoothstep(.2, .9, N0.y) * .8);   // dust settles on top faces
   vec3 earthR = mix(vec3(.18, .12, .09), vec3(.3, .22, .16), v);
   vec3 iceR = vec3(.05, .05, .052);
@@ -586,6 +598,7 @@ void main(){
   float rimK = pow(1. - max(dot(N, V), 0.), 3.) * pow(max(dot(-V, L), 0.), 2.);
   col += uSunCol * rimK * (.05 * atmo.z + .35 * atmo.y + .2 * atmo.x) * mix(vec3(1.), vec3(1., .8, .6), atmo.y);
   float dist = length(vWorld - uCam);
+  col += albedo * vec3(.009, .014, .026) * atmo.z * (1. - NL * sh);                    // earthshine fills the shaded faces
   col = applyAir(col, vWorld, dist, -V, L, atmo);
   gl_FragColor = vec4(col * uReveal, 1.);
 }`;
@@ -736,6 +749,7 @@ uniform float uFlash;
 uniform vec3 uFlashCol;
 uniform vec2 uRes;
 uniform vec3 uVeil;            // x: left strength, y: right strength, z: overall
+uniform float uVeilB;          // bottom-up veil for portrait layouts
 uniform vec3 uShadowTint;
 uniform vec3 uHighTint;
 uniform float uSat;
@@ -749,14 +763,18 @@ vec3 toSRGB(vec3 c){ return mix(c * 12.92, 1.055 * pow(c, vec3(1. / 2.4)) - .055
 void main(){
   vec2 uv = vUv;
   vec3 col = texture2D(tDiffuse, uv).rgb * uExposure;
-  float veil = uVeil.x * (1. - smoothstep(.0, .62, uv.x)) + uVeil.y * smoothstep(.38, 1., uv.x) + uVeil.z;
+  float veil = uVeil.x * (1. - smoothstep(.0, .62, uv.x)) + uVeil.y * smoothstep(.38, 1., uv.x) + uVeil.z
+    + uVeilB * (1. - smoothstep(.0, .6, uv.y));          // portrait screens: text sits low, so the floor of the frame darkens instead
   col *= 1. - clamp(veil, 0., .92);
   col = mix(col, uFlashCol, uFlash);
+  col = col * col / (col + .004);                        // soft toe: a faint bloom haze settles back to black, shadows keep their detail
   col = clamp(ACESOut * rrt(ACESIn * col / .6), 0., 1.);
   float l = dot(col, vec3(.2126, .7152, .0722));
   col = mix(vec3(l), col, uSat);
   col *= mix(uShadowTint, uHighTint, smoothstep(.05, .7, l));
-  col = clamp((col - .5) * uContrast + .5, 0., 1.);
+  // contrast as a power curve around mid-grey: it deepens shadows without ever clipping them to zero
+  // (a linear pivot at .5 pushed every dark value negative: dead-black shadows and coloured edge pixels)
+  col = clamp(.18 * pow(max(col, vec3(0.)) / .18, vec3(uContrast)), 0., 1.);
   vec2 c = uv - .5;
   col *= 1. - smoothstep(.25, 1.1, dot(c, c) * 2.2) * .32;
   col = toSRGB(col);

@@ -284,26 +284,26 @@ export function HomePage() {
     <section data-chapter="0" className="wd-ch wd-hero">
       <div className="wd-frame">
         <div className="wd-hero-copy">
-          <p className="wd-kicker wd-in" style={{ '--d': '900ms' } as React.CSSProperties}>{L(lang, 'EGIZ · Training grounds for the Moon and Mars', 'EGIZ · Земные полигоны для Луны и Марса')}</p>
+          <p className="wd-kicker wd-in" style={{ '--d': '300ms' } as React.CSSProperties}>{L(lang, 'EGIZ · Training grounds for the Moon and Mars', 'EGIZ · Земные полигоны для Луны и Марса')}</p>
           <h1 id="hm-title" className="wd-title">
-            <span className="wd-line"><span style={{ '--d': '1300ms' } as React.CSSProperties}>{L(lang, 'The next', 'Новый')}</span></span>
-            <span className="wd-line wd-line-indent"><span style={{ '--d': '1450ms' } as React.CSSProperties}>{L(lang, 'frontier', 'рубеж')}</span></span>
-            <span className="wd-line"><span style={{ '--d': '1600ms' } as React.CSSProperties}>{L(lang, 'starts here', 'начинается здесь')}</span></span>
+            <span className="wd-line"><span style={{ '--d': '500ms' } as React.CSSProperties}>{L(lang, 'The next', 'Новый')}</span></span>
+            <span className="wd-line wd-line-indent"><span style={{ '--d': '620ms' } as React.CSSProperties}>{L(lang, 'frontier', 'рубеж')}</span></span>
+            <span className="wd-line"><span style={{ '--d': '740ms' } as React.CSSProperties}>{L(lang, 'starts here', 'начинается здесь')}</span></span>
           </h1>
-          <p className="wd-lede wd-in" style={{ '--d': '2100ms' } as React.CSSProperties}>{L(lang,
+          <p className="wd-lede wd-in" style={{ '--d': '1100ms' } as React.CSSProperties}>{L(lang,
             'Every step on the Moon and Mars is practised on Earth first. EGIZ finds the places on our planet that come closest — and says plainly what no place on Earth can teach.',
             'Каждый шаг на Луне и Марсе сначала отрабатывают на Земле. EGIZ находит места на нашей планете, которые ближе всего к цели, — и прямо говорит, чему Земля научить не может.')}</p>
-          <div className="wd-actions wd-in" style={{ '--d': '2400ms' } as React.CSSProperties}>
+          <div className="wd-actions wd-in" style={{ '--d': '1300ms' } as React.CSSProperties}>
             <button className="eg-button" onClick={() => jump(6)}>{L(lang, 'Plan a mission', 'Спланировать миссию')}<ArrowRight size={16} strokeWidth={1.6} /></button>
             <button className="eg-button quiet" onClick={() => open('campaign')}><span>{L(lang, 'Find field sites', 'Подобрать полигоны')}</span></button>
           </div>
         </div>
-        <dl className="wd-hero-read wd-in" style={{ '--d': '2700ms' } as React.CSSProperties}>
+        <dl className="wd-hero-read wd-in" style={{ '--d': '1500ms' } as React.CSSProperties}>
           {moon && <div><dt>{L(lang, 'Target', 'Цель')}</dt><dd>{shortName(moon.name)} · {latLon(lang, moon.lat, moon.lon)}</dd></div>}
           <div><dt>{L(lang, 'Surface', 'Поверхность')}</dt><dd>{L(lang, 'Measured lunar terrain, rendered live', 'Измеренный лунный рельеф в реальном времени')}</dd></div>
           {moon?.h_max_deg != null && <div><dt>{L(lang, 'Sun', 'Солнце')}</dt><dd>{L(lang, `never higher than ${moon.h_max_deg.toFixed(1)}°`, `никогда не выше ${moon.h_max_deg.toFixed(1)}°`)}</dd></div>}
         </dl>
-        <button className="wd-scroll wd-in" style={{ '--d': '3000ms' } as React.CSSProperties} onClick={() => jump(1)} aria-label={L(lang, 'Scroll to story', 'Прокрутить вниз')}><ArrowDown size={14} strokeWidth={1.4} /><span>{L(lang, 'Scroll — the ground is about to change', 'Прокрутите — грунт сейчас изменится')}</span></button>
+        <button className="wd-scroll wd-in" style={{ '--d': '1700ms' } as React.CSSProperties} onClick={() => jump(1)} aria-label={L(lang, 'Scroll to story', 'Прокрутить вниз')}><ArrowDown size={14} strokeWidth={1.4} /><span>{L(lang, 'Scroll — the ground is about to change', 'Прокрутите — грунт сейчас изменится')}</span></button>
       </div>
     </section>
 

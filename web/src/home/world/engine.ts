@@ -76,6 +76,8 @@ export class WorldEngine {
     this.renderer.toneMapping = THREE.NoToneMapping;
     this.renderer.outputColorSpace = THREE.LinearSRGBColorSpace;
     this.quality = Math.min(window.devicePixelRatio || 1, 1.5);
+    // phones and small tablets: same picture from a lighter setup (smaller bake, coarser grid, fewer boulders)
+    const compact = Math.min(window.innerWidth, window.innerHeight) < 600 || window.matchMedia?.('(pointer: coarse)').matches;
 
     // ---------- Measured textures ----------
     const side = stage?.side ?? 2;
@@ -139,10 +141,10 @@ export class WorldEngine {
       this.bakes.push(rt);
       return rt.texture;
     };
-    this.uT.uDetailNear.value = bake(22000, 4096, 1);
+    this.uT.uDetailNear.value = bake(22000, compact ? 2048 : 4096, 1);
     this.uT.uDetailFar.value = bake(120000, 2048, 0);
 
-    const segs = 1024;
+    const segs = compact ? 640 : 1024;
     const geo = new THREE.PlaneGeometry(2, 2, segs, segs);
     const mat = new THREE.ShaderMaterial({ vertexShader: TERRAIN_VERT, fragmentShader: TERRAIN_FRAG, uniforms: this.uT });
     mat.extensions = { ...(mat.extensions ?? {}), derivatives: true } as THREE.ShaderMaterial['extensions'];
@@ -152,7 +154,7 @@ export class WorldEngine {
     const rockGeo = makeRockGeometry();
     const ig = new THREE.InstancedBufferGeometry();
     ig.index = rockGeo.index; ig.setAttribute('position', rockGeo.attributes.position); ig.setAttribute('normal', rockGeo.attributes.normal);
-    const COUNT = 16000, TILE = 1600; const data = new Float32Array(COUNT * 4);
+    const COUNT = compact ? 7000 : 16000, TILE = 1600; const data = new Float32Array(COUNT * 4);
     let seed = 7; const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
     for (let i = 0; i < COUNT; i++) {
       const size = Math.min(10, .55 * Math.pow(1 - rnd(), -1 / 1.5));     // power-law clast sizes: many pebbles, few blocks
@@ -181,7 +183,7 @@ export class WorldEngine {
     this.bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), .22, .5, 1.6);
     this.composer.addPass(this.bloom);
     this.post = new ShaderPass({
-      uniforms: { tDiffuse: { value: null }, uExposure: { value: 1 }, uTime: { value: 0 }, uFlash: { value: 0 }, uFlashCol: { value: new THREE.Vector3(.7, .8, 1) }, uRes: { value: new THREE.Vector2(1, 1) }, uVeil: { value: new THREE.Vector3() },
+      uniforms: { tDiffuse: { value: null }, uExposure: { value: 1 }, uTime: { value: 0 }, uFlash: { value: 0 }, uFlashCol: { value: new THREE.Vector3(.7, .8, 1) }, uRes: { value: new THREE.Vector2(1, 1) }, uVeil: { value: new THREE.Vector3() }, uVeilB: { value: 0 },
         uShadowTint: { value: new THREE.Vector3(1, 1, 1) }, uHighTint: { value: new THREE.Vector3(1, 1, 1) }, uSat: { value: 1 }, uContrast: { value: 1 } },
       vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.); }',
       fragmentShader: POST_FRAG,
@@ -291,7 +293,7 @@ export class WorldEngine {
 
     // ---------- Sun ----------
     let el = s.sunEl, az = s.sunAz;
-    if (!this.reduced && time < 7 && this.chapter < .6) el = mix(-1.6, el, smooth(time / 6.5));
+    if (!this.reduced && time < 4 && this.chapter < .6) el = mix(-.4, el, smooth(time / 3.6));
     this.sunDrag += ((s.sunDrag && pt.inside ? pt.sx * 70 : 0) - this.sunDrag) * (1 - Math.exp(-dt * 2));
     az += this.sunDrag;
     const er = el * Math.PI / 180, ar = az * Math.PI / 180;
@@ -307,7 +309,7 @@ export class WorldEngine {
     const cam = new THREE.Vector3(...s.cam), look = new THREE.Vector3(...s.look);
     if (!this.reduced) {
       cam.x += Math.sin(time * .07) * 30; cam.y += Math.sin(time * .11) * 12;
-      if (this.chapter < .6) { const k = smooth(time / 10); const back = cam.clone().sub(look).normalize(); cam.addScaledVector(back, (1 - k) * 900 * (1 - this.chapter / .6)); }
+      if (this.chapter < .6) { const k = smooth(time / 7); const back = cam.clone().sub(look).normalize(); cam.addScaledVector(back, (1 - k) * 900 * (1 - this.chapter / .6)); }
     }
     // keep the lens above the ground it is filming
     const ground = this.heightAt(cam.x, cam.z, w);
@@ -315,8 +317,10 @@ export class WorldEngine {
     const dir = look.clone().sub(cam); const dist = dir.length();
     const side = new THREE.Vector3().crossVectors(dir, new THREE.Vector3(0, 1, 0)).normalize();
     const lookAt = look.clone().addScaledVector(side, -pt.sx * dist * .05).add(new THREE.Vector3(0, -pt.sy * dist * .035, 0));
+    // portrait: words fill the lower half, so tilt down and let the ground climb into the empty sky above them
+    lookAt.y -= dist * .2 * clamp((1.05 - this.camera.aspect) / .35);
     this.camera.position.copy(cam); this.camera.up.set(0, 1, 0); this.camera.lookAt(lookAt);
-    this.camera.fov = s.fov; this.camera.updateProjectionMatrix(); this.camera.updateMatrixWorld();
+    this.camera.fov = this.lens(s.fov, .7); this.camera.updateProjectionMatrix(); this.camera.updateMatrixWorld();
     (this.uT.uCam.value as THREE.Vector3).copy(cam);
     (this.uT.uGridCenter.value as THREE.Vector2).set(Math.round(cam.x / 8) * 8, Math.round(cam.z / 8) * 8);
     this.rocks.visible = s.space < .5;
@@ -349,7 +353,7 @@ export class WorldEngine {
     if (s.space > .5) {
       // telephoto on the limb: point the real camera at the horizon so the sky shader frames it
       const aim = pitchDown - .034; const lim = new THREE.Vector3(0, -Math.sin(aim), -Math.cos(aim));
-      this.camera.position.set(0, 0, 0); this.camera.fov = mix(11, 9.5, clamp((this.chapter - 7) * 1.4));
+      this.camera.position.set(0, 0, 0); this.camera.fov = this.lens(mix(11, 9.5, clamp((this.chapter - 7) * 1.4)), .9);
       this.camera.lookAt(lim.x - pt.sx * .01, lim.y - pt.sy * .006, lim.z); this.camera.updateProjectionMatrix(); this.camera.updateMatrixWorld();
     }
     (this.uS.uInvProj.value as THREE.Matrix4).copy(this.camera.projectionMatrixInverse);
@@ -365,9 +369,14 @@ export class WorldEngine {
       this.post.uniforms.uSat.value = .82 * g[0] + 1.02 * g[1] + .95 * g[2] + .92 * g[3] + 1. * g[4];
       this.post.uniforms.uContrast.value = 1.07 * g[0] + 1.08 * g[1] + 1.04 * g[2] + 1.04 * g[3] + 1.02 * g[4];
     }
-    (this.post.uniforms.uVeil.value as THREE.Vector3).set(...s.veil);
+    { // landscape: the text column's side darkens; portrait: text sits low over the whole width, so the floor darkens
+      const portrait = clamp((1.05 - this.camera.aspect) / .35);
+      const v = s.veil; (this.post.uniforms.uVeil.value as THREE.Vector3).set(v[0] * (1 - portrait), v[1] * (1 - portrait), v[2]);
+      this.post.uniforms.uVeilB.value = portrait * mix(.5, .15, s.space);
+    }
     this.post.uniforms.uTime.value = time;
-    this.bloom.strength = mix(.22, .4, s.space);
+    // airless ground blooms less: in vacuum there is no haze to carry the glow, so the sky stays black
+    this.bloom.strength = mix(.1 + .14 * (earthAir + marsAir), .4, s.space);
 
     this.composer.render(dt);
     this.updateLabels();
@@ -460,6 +469,13 @@ export class WorldEngine {
       l.el.style.opacity = String(a);
       l.el.style.transform = `translate3d(${((v.x * .5 + .5) * vw).toFixed(1)}px, ${((-v.y * .5 + .5) * vh).toFixed(1)}px, 0)`;
     }
+  }
+
+  /** Keeps the horizontal view from collapsing on tall screens: a shot framed for 16:9 widens on a phone. */
+  private lens(fov: number, k: number) {
+    const a = this.camera.aspect; if (a >= 1.25) return fov;
+    const t = Math.tan(fov * Math.PI / 360) * Math.pow(1.25 / a, k);
+    return Math.min(84, Math.atan(t) * 360 / Math.PI);
   }
 
   /** Dynamic resolution: hold a smooth frame rate rather than cutting what is drawn. */
