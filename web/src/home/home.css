@@ -438,3 +438,4 @@ html.lenis, html.lenis body { height: auto; }
 /* Decode: the real text for assistive tech, a fixed-width scramble for the eye */
 .fa-sr { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 .fa-dec { white-space: pre-wrap; }
+.hm-panel-link.hm-investigate { margin: 6px 0 20px; color: var(--paper); font-size: 13px; }

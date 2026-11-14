@@ -1,5 +1,5 @@
 // EGIZ landing narrative. Every figure on this page is read from the loaded dataset.
-import { Fragment, isValidElement, useEffect, useRef, useState, type ReactNode } from 'react';
+import { Fragment, isValidElement, lazy, Suspense, useEffect, useRef, useState, type ReactNode } from 'react';
 import { ArrowRight, ArrowUpRight } from 'lucide-react';
 import Lenis from 'lenis';
 import { Decode } from './Decode';
@@ -11,6 +11,22 @@ import { MissionGlyph } from '../mission/MissionGlyph';
 import { setLaunchIntent, type LaunchOverrides } from '../mission/launchIntent';
 import type { Mode } from '../mission/types';
 import './home.css';
+import { startMission } from '../expedition/actions';
+import { openWorkspace } from '../expedition/nav';
+import { usePlanet } from '../planet/workspace/store';
+
+// The destination choice draws two live globes (three.js); it loads only when its chapter is reached.
+const WorldChoice = lazy(() => import('../expedition/WorldChoice').then(m => ({ default: m.WorldChoice })));
+/** Mount children once the placeholder scrolls near the viewport. */
+function WhenNear({ children, minHeight }: { children: ReactNode; minHeight: number }) {
+  const ref = useRef<HTMLDivElement>(null); const [near, setNear] = useState(false);
+  useEffect(() => {
+    const el = ref.current; if (!el || typeof IntersectionObserver === 'undefined') { setNear(true); return; }
+    const io = new IntersectionObserver(([e]) => { if (e.isIntersecting) { setNear(true); io.disconnect(); } }, { rootMargin: '600px 0px' });
+    io.observe(el); return () => io.disconnect();
+  }, []);
+  return <div ref={ref} style={near ? undefined : { minHeight }}>{near && children}</div>;
+}
 
 interface Param { key: string; group: 'rover' | 'vehicle'; en: string; ru: string; unit: string; min: number; max: number; step: number; value: number; maxFrom?: string }
 /** The few inputs that change each expedition the most; everything else stays in the lab. */
@@ -287,7 +303,10 @@ export function HomePage() {
     open('lab', destination === 'mars' ? mars : moon);
   };
 
+  const hasMission = !!usePlanet.getState().world();
   const tools: { route: Route; title: string; ru: string; text: string; textRu: string }[] = [
+    ...(hasMission ? [{ route: 'mission' as Route, title: 'Mission Home', ru: 'Центр миссии', text: 'Your mission at a glance: site, findings, Earth analogs, open questions, next actions.', textRu: 'Ваша миссия целиком: место, выводы, земные аналоги, открытые вопросы, следующие шаги.' }] : []),
+    { route: 'explore', title: 'Expedition', ru: 'Экспедиция', text: 'Choose the Moon or Mars, explore the planet, investigate a site, find its Earth analogs.', textRu: 'Выберите Луну или Марс, изучите планету и место, найдите земные аналоги.' },
     { route: 'planet', title: 'Planetary Studio', ru: 'Планетарная студия', text: 'One investigation from start to finish: discover, inspect, simulate, compare, decide.', textRu: 'Одно исследование от начала до конца: найти, изучить, смоделировать, сравнить, решить.' },
     { route: 'discover', title: 'Discover', ru: 'Поиск аналогов', text: 'Search the whole Earth for analogue ground, and ask the assistant in plain words.', textRu: 'Поиск аналогов по всей Земле — и ассистент, которому можно задать вопрос словами.' },
     { route: 'astral', title: 'Mission Studio', ru: 'Студия миссий', text: 'Measured Jezero ground: terrain units, science targets and a rover you can plan.', textRu: 'Измеренный грунт Езеро: типы рельефа, научные цели и ровер, которым можно управлять.' },
@@ -348,6 +367,8 @@ export function HomePage() {
           <div className="hm-dest" role="radiogroup" aria-label={L(lang, 'Destination', 'Цель')}>
             {([['moon', moon, L(lang, 'Moon', 'Луна')], ['mars', mars, L(lang, 'Mars', 'Марс')]] as const).filter(([, t]) => t).map(([body, , label]) => <button key={body} role="radio" aria-checked={destination === body} onClick={() => setDestination(body)}>{label}</button>)}
           </div>
+
+          <button className="hm-panel-link hm-investigate" onClick={() => startMission(destination)}>{L(lang, `Investigate ${destination === 'mars' ? 'Mars' : 'the Moon'} →`, `Исследовать: ${destination === 'mars' ? 'Марс' : 'Луна'} →`)}</button>
 
           <p className="hm-panel-label">{L(lang, 'Expedition', 'Экспедиция')}</p>
           <div className="hm-exp-list" role="radiogroup" aria-label={L(lang, 'Expedition', 'Экспедиция')}>
@@ -522,15 +543,20 @@ export function HomePage() {
       </div>
     </section>
 
-    {/* 08 — Index of workspaces */}
+    {/* 08 — The choice: the Moon or Mars? START begins the investigation */}
+    <section id="hm-choose" className="hm-choose" aria-label={L(lang, 'Start a mission', 'Начать миссию')}>
+      <WhenNear minHeight={720}><Suspense fallback={<div style={{ minHeight: 720 }} />}><WorldChoice /></Suspense></WhenNear>
+    </section>
+
+    {/* 09 — Index of workspaces */}
     <section className="hm-index hm-wrap" aria-labelledby="hm-index">
       <div className="hm-index-head">
-        <p className="eg-eyebrow" data-reveal><DecodeView text={L(lang, '08 / Workspaces', '08 / Разделы')} /></p>
+        <p className="eg-eyebrow" data-reveal><DecodeView text={L(lang, '09 / Workspaces', '09 / Разделы')} /></p>
         <h2 id="hm-index" className="eg-display hm-h2" data-reveal><Words>{L(lang, 'Everything a mission needs.', 'Всё, что нужно миссии.')}</Words></h2>
       </div>
       <ul className="hm-index-list">
         {tools.map((tool, i) => <li key={tool.route} data-reveal>
-          <button onClick={() => open(tool.route)}>
+          <button onClick={() => (tool.route === 'explore' && !hasMission ? document.getElementById('hm-choose')?.scrollIntoView({ behavior: 'smooth' }) : openWorkspace(tool.route))}>
             <span className="hm-index-n">{String(i + 1).padStart(2, '0')}</span>
             <span className="hm-index-title">{L(lang, tool.title, tool.ru)}</span>
             <span className="hm-index-text">{L(lang, tool.text, tool.textRu)}</span>
