@@ -126,6 +126,23 @@ def test_env_supplement_must_match_catalog(tmp_path):
         load_geo_snapshot(GEO, PILOT, env_dir=env)
 
 
+ENV = ROOT / "data" / "env" / "env-0.1.0"
+
+
+@pytest.mark.skipif(not ENV.exists(), reason="env-0.1.0 supplement not present")
+def test_real_env_supplement_binds_to_release():
+    snap = load_geo_snapshot(GEO, PILOT, env_dir=ENV)
+    assert len(snap.candidates) == 329
+    assert all(t["attrs"]["precip_mm"] is not None for t in snap.candidates)
+    with_t = [t for t in snap.candidates if t["attrs"]["t_min_c"] is not None]
+    assert len(with_t) > 280
+    for tile in with_t:
+        assert -90 < tile["attrs"]["t_min_c"] < 40 and tile["attrs"]["t_min_c"] < tile["attrs"]["t_max_c"]
+    for tile in snap.candidates:
+        if tile["attrs"]["t_min_c"] is None:
+            assert tile["missing_reasons"]["t_min_c"]
+
+
 def test_documents_validate_with_groups_and_context():
     snap = load_geo_snapshot(GEO, PILOT, limit=30)
     docs = build_documents(snap, {"stability_draws": 10}, created_at="2026-11-14T00:00:00+00:00")
