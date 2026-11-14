@@ -215,6 +215,7 @@ def test_rover_experiment_on_candidate_terrain():
     from pipeline.discovery.rover import rover_experiment
     flat = rover_experiment(_window(**_stats(2, 6, 0.97, 1.0, 0.8, 0.18, 0.02)), "moon")
     rough = rover_experiment(_window(**_stats(12, 25, 0.4, 0.75, 0.15, 0.4, 0.35)), "moon")
+    assert flat is not None and rough is not None
     assert flat["status"] == "MODEL_ESTIMATE" and flat["assumptions"]
     assert flat["cases"]["target"]["traversable_frac"] >= rough["cases"]["target"]["traversable_frac"]
     d = rough["deltas"]["earth_load_matched"]

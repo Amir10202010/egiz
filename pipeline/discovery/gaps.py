@@ -103,7 +103,8 @@ def gap_ledger(target: Target, w: Window, terrain_w1_deg: float | None = None) -
                      earth_evidence="documented", target_evidence="documented",
                      source=f"{body['source']}; {D.NSSDC_EARTH}", uncertainty="+-3 % orbital eccentricity (Mars +-20 %)"))
     veg = [w.f(k) for k in ("tree_frac", "crop_frac", "grass_shrub_frac")]
-    veg_frac = None if any(v is None for v in veg) else round(sum(veg), 4)
+    known_veg = [v for v in veg if v is not None]
+    veg_frac = round(sum(known_veg), 4) if len(known_veg) == len(veg) else None
     rows.append(_row("vegetation", "Vegetated fraction of the window", "fraction", 0.0, veg_frac,
                      earth_evidence="proxy (ESA WorldCover 2021 classes)", target_evidence="physical constraint",
                      source="ESA WorldCover v200", uncertainty="+-0.08 (class accuracy)", measurable=veg_frac is not None))

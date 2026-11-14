@@ -116,7 +116,7 @@ for px, py in pts:
     d = np.sqrt(dx * dx + dy * dy)
     m = d < d1; d2 = np.where(m, d1, np.minimum(d2, d)); d1 = np.where(m, d, d1)
 edge = np.clip((d2 - d1) / 10, 0, 1)
-edge = np.array(Image.fromarray((edge * 255).astype(np.uint8)).resize((N, N), Image.BICUBIC)) / 255
+edge = np.array(Image.fromarray((edge * 255).astype(np.uint8)).resize((N, N), Image.Resampling.BICUBIC)) / 255
 h = spectral(2.9, lo=2, seed=6) * .45 + spectral(2.0, lo=60, hi=1000, seed=7) * .06 + bedding - (1 - edge) ** 3 * .5
 for _ in range(1800):
     r = (rng.pareto(1.8) + 1) * 2

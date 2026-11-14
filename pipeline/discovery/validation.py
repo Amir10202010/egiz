@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import json
 from datetime import datetime, timezone
+from typing import cast
 
 import numpy as np
 from scipy.stats import spearmanr
@@ -112,7 +113,7 @@ def run_validation(draws: int = 64, write: bool = True) -> str:
         entry["sensitivity"] = {"auc_p05_p50_p95": [round(float(np.nanquantile(aucs, q)), 4) for q in (0.05, 0.5, 0.95)],
                                 "top10_jaccard_p05_p50_p95": [round(float(np.quantile(jac, q)), 4) for q in (0.05, 0.5, 0.95)]}
         alt = R.aggregate(_dims_tuple(R.score_target(table, t, pop, draws, 7)), default)["score"]
-        rho = spearmanr(base, alt).statistic
+        rho = cast(float, spearmanr(base, alt)[0])
         entry["reproducibility"] = {"spearman_seed_2026_vs_7": round(float(rho), 5),
                                     "top10_identical": bool(set(np.argsort(-base)[:10]) == set(np.argsort(-alt)[:10]))}
         results.append(entry)
