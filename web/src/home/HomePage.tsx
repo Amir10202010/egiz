@@ -1,6 +1,7 @@
 // EGIZ landing narrative. Every figure on this page is read from the loaded dataset.
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { ArrowRight, ArrowUpRight } from 'lucide-react';
+import Lenis from 'lenis';
 import { t as tr, useLanguage } from '../i18n';
 import { useAppStore, type Route } from '../state/store';
 import type { AppData, Run, Target } from '../types/contracts';
@@ -126,38 +127,59 @@ function bestCampaign(run: Run | undefined) {
   return run.campaigns.reduce((a, b) => (b.k > a.k ? b : a));
 }
 
-/** Spatial scroll: pinned film plates follow the scroll frame by frame, and content blocks swing
- *  into place in 3D as they arrive and lean back as they leave. Off for reduced motion. */
+/** Which motion each element gets, by its role on the page. */
+function motionFor(el: HTMLElement, i: number): string {
+  if (el.closest('.hm-plate-copy') && el.matches('h2')) return 'scene';
+  if (el.matches('.eg-eyebrow')) return 'left';
+  if (el.matches('.hm-statement')) return 'depth';
+  if (el.matches('.hm-target-figure')) return 'door';
+  if (el.matches('.hm-steps li, .hm-result, .hm-specs')) return 'flip';
+  if (el.matches('.hm-ledger li')) return i % 2 ? 'right' : 'left-far';
+  if (el.matches('h2')) return 'tilt';
+  return 'rise';
+}
+
+/** Spatial scroll: inertial smooth scrolling; pinned film plates follow the scroll frame by frame;
+ *  every content element moves through the scene in its own way as it arrives and leaves.
+ *  Off for reduced motion (then the page is plain and still). */
 function useSpatial(root: React.RefObject<HTMLElement | null>) {
   useEffect(() => {
     const host = root.current; if (!host || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
     const clamp = (v: number) => Math.min(1, Math.max(0, v));
+    // inertial scrolling: wheel and trackpad glide instead of stepping
+    const lenis = new Lenis({ duration: 1.15, smoothWheel: true, autoRaf: true });
+    // assign motions once; the ledger alternates sides
+    const movers = Array.from(host.querySelectorAll<HTMLElement>('[data-reveal]')).filter(el => !el.closest('.hm-hero'));
+    let ledger = 0;
+    movers.forEach(el => { el.dataset.sp = motionFor(el, el.matches('.hm-ledger li') ? ledger++ : 0); });
     const smoothed = new WeakMap<HTMLVideoElement, number>();
     let raf = 0, last = performance.now();
     const frame = (now: number) => {
       raf = requestAnimationFrame(frame);
       const dt = Math.min(.05, (now - last) / 1000); last = now; const vh = window.innerHeight;
-      host.querySelectorAll<HTMLElement>('[data-spatial]').forEach(el => {
-        const r = el.getBoundingClientRect(); if (r.top > vh * 1.2 || r.bottom < -vh * .2) return;
-        el.style.setProperty('--sp', clamp((vh - r.top) / (vh * .72)).toFixed(3));
-        el.style.setProperty('--sx', clamp((vh * .3 - r.bottom) / (vh * .3)).toFixed(3));
-      });
+      for (const el of movers) {
+        const r = el.getBoundingClientRect(); if (r.top > vh * 1.15 || r.bottom < -vh * .15) continue;
+        el.style.setProperty('--sp', clamp((vh * .98 - r.top) / (vh * .55)).toFixed(3));
+        el.style.setProperty('--sx', clamp((vh * .16 - r.bottom) / (vh * .24)).toFixed(3));
+      }
       host.querySelectorAll<HTMLElement>('.hm-plate-scrub').forEach(sec => {
         const r = sec.getBoundingClientRect(); const v = sec.querySelector<HTMLVideoElement>('video[data-scrub]');
         if (r.top > vh * 1.5 || r.bottom < -vh * .5) return;
         if (v && v.preload !== 'auto') { v.preload = 'auto'; v.load(); }
         const p = clamp(-r.top / Math.max(1, r.height - vh)); sec.style.setProperty('--p', p.toFixed(4));
-        if (!v || v.readyState < 1 || !v.duration) return;
-        const prev = smoothed.get(v) ?? p; const sp = prev + (p - prev) * (1 - Math.exp(-dt * 9)); smoothed.set(v, sp);
+        if (!v || v.readyState < 2 || !v.duration) return;
+        const prev = smoothed.get(v) ?? p; const sp = prev + (p - prev) * (1 - Math.exp(-dt * 14)); smoothed.set(v, sp);
         if (!v.paused) v.pause();
-        const t = sp * (v.duration - .05); if (Math.abs(v.currentTime - t) > 1 / 48) v.currentTime = t;
+        // one seek at a time: queuing seeks while the decoder is busy is what makes scrubbing stutter
+        const t = sp * (v.duration - .05);
+        if (!v.seeking && Math.abs(v.currentTime - t) > 1 / 60) v.currentTime = t;
       });
       const foot = host.querySelector<HTMLElement>('[data-spatial-footer]');
       if (foot) { const r = foot.getBoundingClientRect(); foot.style.setProperty('--set', clamp((vh - r.top) / (r.height + vh * .2)).toFixed(3)); }
     };
     host.classList.add('is-spatial');
     raf = requestAnimationFrame(frame);
-    return () => { cancelAnimationFrame(raf); host.classList.remove('is-spatial'); };
+    return () => { cancelAnimationFrame(raf); lenis.destroy(); host.classList.remove('is-spatial'); movers.forEach(el => { delete el.dataset.sp; }); };
   }, [root]);
 }
 
@@ -263,7 +285,7 @@ export function HomePage() {
     </section>
 
     {/* 02 — Thesis */}
-    <section id="hm-thesis" className="hm-thesis hm-wrap" data-spatial>
+    <section id="hm-thesis" className="hm-thesis hm-wrap">
       <p className="eg-eyebrow" data-reveal>{L(lang, '01 / The problem', '01 / Задача')}</p>
       <h2 className="hm-statement" data-reveal>{L(lang,
         'Every crew that leaves Earth trains on it first. The hard question is where — and what that rehearsal can never prove.',
@@ -282,7 +304,7 @@ export function HomePage() {
     {/* Film — the stand-in: the same light on another world */}
     <section className="hm-plate hm-plate-film hm-plate-scrub" aria-labelledby="hm-twin">
       <div className="hm-plate-media" aria-hidden="true"><Clip base="media/cinematic/earth/s2-twin" scrub /></div>
-      <div className="hm-plate-copy hm-wrap" data-spatial>
+      <div className="hm-plate-copy hm-wrap">
         <p className="eg-eyebrow" data-reveal>{L(lang, 'The stand-in', 'Двойник')}</p>
         <h2 id="hm-twin" className="eg-display hm-h2" data-reveal>{L(lang, 'Same light. Another world.', 'Тот же свет. Другой мир.')}</h2>
         <p className="hm-body" data-reveal>{L(lang, 'The lunar plain turns into a desert salt pan. Crews rehearse here before they ever leave Earth.', 'Лунная равнина превращается в солончак пустыни. Здесь экипажи репетируют, прежде чем покинуть Землю.')}</p>
@@ -291,7 +313,7 @@ export function HomePage() {
     </section>
 
     {/* 03 — Moon target, measured */}
-    {moon && <section className="hm-target hm-wrap" aria-labelledby="hm-moon" data-spatial>
+    {moon && <section className="hm-target hm-wrap" aria-labelledby="hm-moon">
       <figure className="hm-target-figure" data-reveal>
         <div className="hm-target-image">
           <img src={asset('hero/mons-mouton-hillshade-1600.jpg')} srcSet={`${asset('hero/mons-mouton-hillshade-800.jpg')} 800w, ${asset('hero/mons-mouton-hillshade-1600.jpg')} 1600w`} sizes="(max-width: 900px) 100vw, 50vw" width={1600} height={1600} alt={L(lang, 'Hillshade of the measured Mons Mouton terrain, 4 by 4 kilometres, lit by a low sun.', 'Теневая отмывка измеренного рельефа Монс-Мутон, 4 на 4 километра, при низком Солнце.')} loading="lazy" decoding="async" />
@@ -321,7 +343,7 @@ export function HomePage() {
       <div className="hm-plate-media" aria-hidden="true">
         <Clip base="media/cinematic/transitions/s4-passage" scrub />
       </div>
-      <div className="hm-plate-copy hm-wrap" data-spatial>
+      <div className="hm-plate-copy hm-wrap">
         <p className="eg-eyebrow" data-reveal>{L(lang, '03 / Destination — Mars', '03 / Цель — Марс')}</p>
         <h2 id="hm-mars" className="eg-display hm-h2 hm-h2-xl" data-reveal>{L(lang, 'Jezero', 'Езеро')}</h2>
         <p className="hm-body" data-reveal>{L(lang,
@@ -339,7 +361,7 @@ export function HomePage() {
     {/* Film — Mars becomes its Earth twin */}
     {mars && <section className="hm-plate hm-plate-film hm-plate-scrub" aria-labelledby="hm-mars-twin">
       <div className="hm-plate-media" aria-hidden="true"><Clip base="media/cinematic/missions/s6-answer" scrub /></div>
-      <div className="hm-plate-copy hm-wrap" data-spatial>
+      <div className="hm-plate-copy hm-wrap">
         <p className="eg-eyebrow" data-reveal>{L(lang, 'The twin of Mars', 'Двойник Марса')}</p>
         <h2 id="hm-mars-twin" className="eg-display hm-h2" data-reveal>{L(lang, 'Mars has one too.', 'У Марса он тоже есть.')}</h2>
         {marsTwinName && <p className="hm-body" data-reveal>{L(lang, `The closest ground to Jezero on Earth: ${marsTwinName}.`, `Самый близкий к Езеро грунт на Земле — ${marsTwinName}.`)}</p>}
@@ -348,7 +370,7 @@ export function HomePage() {
     </section>}
 
     {/* 05 — Method & the live result */}
-    <section className="hm-method hm-wrap" aria-labelledby="hm-method" data-spatial>
+    <section className="hm-method hm-wrap" aria-labelledby="hm-method">
       <div className="hm-method-head">
         <p className="eg-eyebrow" data-reveal>{L(lang, '04 / Method', '04 / Метод')}</p>
         <h2 id="hm-method" className="eg-display hm-h2" data-reveal>{L(lang, 'Constrain. Compute. Confess.', 'Ограничить. Рассчитать. Признать.')}</h2>
@@ -372,7 +394,7 @@ export function HomePage() {
     </section>
 
     {/* 06 — What Earth cannot test */}
-    {gapRows.length > 0 && <section className="hm-gaps hm-wrap" aria-labelledby="hm-gaps" data-spatial>
+    {gapRows.length > 0 && <section className="hm-gaps hm-wrap" aria-labelledby="hm-gaps">
       <div className="hm-gaps-head">
         <p className="eg-eyebrow" data-reveal>{L(lang, '05 / Gap ledger', '05 / Реестр пробелов')}</p>
         <h2 id="hm-gaps" className="eg-display hm-h2" data-reveal>{L(lang, 'What Earth cannot test', 'Что Земля не может проверить')}</h2>
@@ -392,7 +414,7 @@ export function HomePage() {
       <div className="hm-plate-media" aria-hidden="true">
         <Clip base="media/cinematic/orbital/s7-home" scrub />
       </div>
-      <div className="hm-plate-copy hm-plate-copy-top hm-wrap" data-spatial>
+      <div className="hm-plate-copy hm-plate-copy-top hm-wrap">
         <p className="eg-eyebrow" data-reveal>{L(lang, '06 / Built in Astana', '06 / Сделано в Астане')}</p>
         <h2 id="hm-earth" className="eg-display hm-h2 hm-h2-xl" data-reveal>{L(lang, <>Earth,<br />before elsewhere</>, <>Сначала Земля.<br />Затем космос</>)}</h2>
         <div className="hm-actions" data-reveal>
@@ -402,7 +424,7 @@ export function HomePage() {
     </section>
 
     {/* 08 — Index of workspaces */}
-    <section className="hm-index hm-wrap" aria-labelledby="hm-index" data-spatial>
+    <section className="hm-index hm-wrap" aria-labelledby="hm-index">
       <div className="hm-index-head">
         <p className="eg-eyebrow" data-reveal>{L(lang, '07 / Workspaces', '07 / Разделы')}</p>
         <h2 id="hm-index" className="eg-display hm-h2" data-reveal>{L(lang, 'The instrument', 'Инструмент')}</h2>

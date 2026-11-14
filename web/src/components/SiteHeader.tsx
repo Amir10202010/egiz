@@ -75,7 +75,7 @@ export function SiteHeader({ availableModes }: { availableModes: DataMode[] }) {
       </button>
     </div>
     <span className="eg-horizon" aria-hidden="true"><i /></span>
-    <nav id="primary-navigation" className={`eg-nav ${menuOpen ? 'open' : ''}`} aria-label={t('Main navigation')}>
+    <nav id="primary-navigation" className={`eg-nav ${menuOpen ? 'open' : ''}`} aria-label={t('Main navigation')} data-lenis-prevent>
       <p className="eg-nav-kicker" aria-hidden="true">{t('Index')}</p>
       <div className="eg-nav-list">
         {links.map((r, i) => <button key={r} aria-current={route === r ? 'page' : undefined} className={route === r ? 'active' : ''} style={{ '--i': i } as React.CSSProperties} onClick={() => { navigate(r); setMenuOpen(false); }}>

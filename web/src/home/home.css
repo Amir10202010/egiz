@@ -333,12 +333,37 @@
 .hm-plate-scrub .hm-plate-copy { position: relative; z-index: 1; margin-top: -62svh; padding-top: 0; padding-bottom: 30svh; }
 .hm-plate-scrub .hm-plate-copy-top { margin-top: -78svh; }
 .hm-plate-scrub .hm-veo { position: sticky; display: block; width: max-content; margin: -40px var(--gutter) 0 auto; bottom: 22px; }
-/* content blocks swing into place in 3D, then lean back as they leave */
-.hm.is-spatial [data-spatial] { --sp: 0; --sx: 0; transform-origin: 50% 0%; will-change: transform, opacity;
-  transform: perspective(1600px) translate3d(0, calc((1 - var(--sp)) * 90px), calc((1 - var(--sp)) * -120px)) rotateX(calc((1 - var(--sp)) * 22deg - var(--sx) * 9deg)) scale(calc(.94 + var(--sp) * .06 - var(--sx) * .04));
-  opacity: calc(.12 + var(--sp) * .88 - var(--sx) * .55); }
+/* ---------- every element moves through the scene in its own way ---------- */
+/* the one-shot reveal steps aside; scroll position drives everything */
+.hm.is-spatial [data-reveal] { opacity: 1; transform: none; transition: none; }
+.hm.is-spatial [data-sp] { --sp: 0; --sx: 0; will-change: transform, opacity; backface-visibility: hidden;
+  opacity: calc(min(1, var(--sp) * 1.6) - var(--sx) * .7); }
+/* rises out of depth */
+.hm.is-spatial [data-sp='rise'] { transform: perspective(1200px) translate3d(0, calc((1 - var(--sp)) * 110px - var(--sx) * 50px), calc((1 - var(--sp)) * -160px)) rotateX(calc((1 - var(--sp)) * 16deg)); transform-origin: 50% 100%; }
+/* slides in from the left, leaning into the move */
+.hm.is-spatial [data-sp='left'] { transform: perspective(1200px) translate3d(calc((1 - var(--sp)) * -140px), 0, 0) rotateY(calc((1 - var(--sp)) * 24deg)); transform-origin: 0 50%; }
+.hm.is-spatial [data-sp='left-far'] { transform: perspective(1400px) translate3d(calc((1 - var(--sp)) * -260px), calc(var(--sx) * -40px), 0) rotateY(calc((1 - var(--sp)) * 32deg - var(--sx) * 10deg)); transform-origin: 0 50%; }
+.hm.is-spatial [data-sp='right'] { transform: perspective(1400px) translate3d(calc((1 - var(--sp)) * 260px), calc(var(--sx) * -40px), 0) rotateY(calc((1 - var(--sp)) * -32deg + var(--sx) * 10deg)); transform-origin: 100% 50%; }
+/* comes up from far away */
+.hm.is-spatial [data-sp='depth'] { transform: perspective(900px) translate3d(0, calc((1 - var(--sp)) * 60px), calc((1 - var(--sp)) * -520px)) rotateX(calc((1 - var(--sp)) * 10deg - var(--sx) * 12deg)); transform-origin: 50% 50%; }
+/* tilts up from lying flat */
+.hm.is-spatial [data-sp='tilt'] { transform: perspective(1100px) translate3d(0, calc((1 - var(--sp)) * 70px), 0) rotateX(calc((1 - var(--sp)) * 58deg - var(--sx) * 20deg)); transform-origin: 50% 100%; }
+/* turns over like a card */
+.hm.is-spatial [data-sp='flip'] { transform: perspective(1100px) translate3d(0, calc((1 - var(--sp)) * 40px), 0) rotateX(calc((1 - var(--sp)) * -88deg + var(--sx) * 24deg)); transform-origin: 50% 0%; }
+/* swings open on a hinge */
+.hm.is-spatial [data-sp='door'] { transform: perspective(1400px) rotateY(calc((1 - var(--sp)) * 62deg - var(--sx) * 14deg)) scale(calc(.9 + var(--sp) * .1)); transform-origin: 0 50%; }
+/* on the film plates the titles turn with the camera as it moves */
+.hm.is-spatial [data-sp='scene'] { transform-origin: 50% 60%;
+  transform: perspective(900px) translate3d(0, calc((.5 - var(--p, .5)) * 90px), calc((1 - var(--sp)) * -260px)) rotateX(calc((1 - var(--sp)) * 70deg - var(--sx) * 40deg)) rotateY(calc((var(--p, .5) - .5) * -22deg)); }
+.hm-plate-scrub .hm-plate-copy { perspective: 1000px; }
 @media (max-width: 700px) {
   .hm-plate-scrub { height: 210svh; }
   .hm-plate-scrub .hm-plate-media::after { background: linear-gradient(0deg, rgba(0,0,0,.92) 0%, rgba(0,0,0,.5) 45%, rgba(0,0,0,.05) 75%), linear-gradient(180deg, #000 0%, rgba(0,0,0,0) 14%); }
   .hm-plate-scrub .hm-plate-copy { margin-top: -58svh; padding-bottom: 36svh; }
 }
+
+/* inertial scrolling (Lenis) */
+html.lenis, html.lenis body { height: auto; }
+.lenis.lenis-smooth { scroll-behavior: auto !important; }
+.lenis.lenis-smooth [data-lenis-prevent] { overscroll-behavior: contain; }
+.lenis.lenis-stopped { overflow: hidden; }
