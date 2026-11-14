@@ -6,7 +6,7 @@ EARTH_COUNT_PER_STRATUM ?= 1000
 EARTH_OUT_DIR ?= data/processed
 EARTH_ARGS ?=
 
-.PHONY: setup fixtures data earth test check web dev offline serve clean ml-validate-data ml-infer ml-test ml-example ml-infer-geo
+.PHONY: setup fixtures data earth test check web dev offline serve clean ml-validate-data ml-infer ml-test ml-example ml-infer-geo ml-env-acquire ml-infer-env
 
 setup:
 	python3 -m venv .venv
@@ -98,3 +98,11 @@ GEO_RELEASE ?= data/geo/geo-0.1.0
 
 ml-infer-geo:
 	$(PYTHON) -m pipeline.ml infer --geo $(GEO_RELEASE) --data data/pilot --out artifacts/ml/discovery-geo
+
+EE_ENV_OUT ?= data/env/env-0.1.0
+
+ml-env-acquire:
+	$(PYTHON) tools/acquire_env_supplement.py --project $(PROJECT) --geo $(GEO_RELEASE) --out $(EE_ENV_OUT) --batch 8
+
+ml-infer-env:
+	$(PYTHON) -m pipeline.ml infer --geo $(GEO_RELEASE) --env $(EE_ENV_OUT) --data data/pilot --out artifacts/ml/discovery-env

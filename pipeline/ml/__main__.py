@@ -23,6 +23,7 @@ def main(argv: list[str] | None = None) -> int:
         p = sub.add_parser(name)
         p.add_argument("--data", default="data/pilot", help="contract snapshot (targets, templates, sun)")
         p.add_argument("--geo", help="geospatial release directory; its Earth AOIs replace the candidates")
+        p.add_argument("--env", help="environment supplement directory (MODIS LST, IMERG) for --geo")
         p.add_argument("--ids", nargs="*", help="restrict to these AOI IDs")
         p.add_argument("--limit", type=int, help="first N candidates in ID order")
     infer = sub.choices["infer"]
@@ -33,7 +34,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     try:
         if args.geo:
-            snapshot = load_geo_snapshot(args.geo, args.data, ids=args.ids, limit=args.limit)
+            snapshot = load_geo_snapshot(args.geo, args.data, ids=args.ids, limit=args.limit, env_dir=args.env)
         else:
             snapshot = load_snapshot(args.data, ids=args.ids, limit=args.limit)
     except ContractError as error:
