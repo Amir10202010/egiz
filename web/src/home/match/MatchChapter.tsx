@@ -130,7 +130,7 @@ export function MatchChapter({ data, lang, films, synthetic, onCover }: { data: 
   const coord = (lat: number, lon: number) => `${Math.abs(lat).toFixed(2)}°${lat >= 0 ? L(lang, 'N', ' с.ш.') : L(lang, 'S', ' ю.ш.')} · ${Math.abs(lon).toFixed(2)}°${lon >= 0 ? L(lang, 'E', ' в.д.') : L(lang, 'W', ' з.д.')}`;
   const objectives = template?.objectives ?? [];
 
-  return <section ref={root} className="mt" data-stage={shown} aria-labelledby="mt-title">
+  return <section ref={root} className="mt" data-stage={shown} aria-labelledby="mt-title" data-nav="0.955 0.88 0.38 0" data-nav-m="0.9 0.93 0.3 0" data-nav-look={shown === 2 ? 'mt-here' : 'mt-there'}>
     {films.length > 0 && <FilmReel films={films} lang={lang} />}
 
     <div className="mt-frame">
@@ -144,7 +144,7 @@ export function MatchChapter({ data, lang, films, synthetic, onCover }: { data: 
 
       <div ref={stageRef} className="mt-stage">
         {/* THERE */}
-        <figure className="mt-panel mt-there">
+        <figure id="mt-there" className="mt-panel mt-there">
           <figcaption><b>{L(lang, 'There', 'Там')}</b><span>{tName}</span><em>{coord(target.lat, target.lon)}</em></figcaption>
           <div className="mt-map">
             <OrthoGlobe key={target.id} src={bodyImg} lat={target.lat} lon={target.lon} zoom={shown === 0 ? 5.5 : 3.2} label={`${tName}, ${isMars ? L(lang, 'Mars', 'Марс') : L(lang, 'Moon', 'Луна')}`} />
@@ -156,7 +156,7 @@ export function MatchChapter({ data, lang, films, synthetic, onCover }: { data: 
         {thread && <svg className="mt-thread" aria-hidden="true"><path d={thread} pathLength={1} /></svg>}
 
         {/* HERE */}
-        <figure className="mt-panel mt-here">
+        <figure id="mt-here" className="mt-panel mt-here">
           <figcaption><b>{L(lang, 'Here', 'Здесь')}</b><span>{shown === 2 ? sName : shown === 1 ? L(lang, `Searching ${tiles.length} places…`, `Поиск среди ${tiles.length} мест…`) : L(lang, 'Earth', 'Земля')}</span><em>{shown === 2 && site ? coord(site.lat, site.lon) : ' '}</em></figcaption>
           <PlanetMap img={`${BASE}textures/earth.jpg`} lat={site?.lat ?? 0} lon={site?.lon ?? 0} zoom={shown === 2 ? 3.2 : 1} focus={shown === 2 ? 1 : 0} label={L(lang, 'Earth candidate sites', 'Кандидаты на Земле')}>
             {tiles.map(t => { const p = uv(t.lat, t.lon); const s = scores.get(t.id); return <button key={t.id} className={`mt-dot ${t.id === siteId ? 'is-site' : ''}`} style={{ left: `${p.u * 100}%`, top: `${p.v * 100}%`, '--s': s ?? 0 } as React.CSSProperties}

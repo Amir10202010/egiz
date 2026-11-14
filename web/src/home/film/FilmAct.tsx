@@ -128,6 +128,11 @@ export function FilmAct({ lang, clips, hMax, soundOn, onCover, onPlan, onFinish 
       let id = seg === 0 ? 'hero' : seg === 5 ? 'handoff' : '';
       for (const c of capsRef.current) if (c.seg === seg && t >= c.from && t <= c.to) id = c.id;
       if (id !== capRef.current) { capRef.current = id; setCap(id); }
+      // the navigator's pose for this moment of the film, and what it looks at
+      const navPose = seg === 0 ? ['0.76 0.42 1.15 0', 'hm-title'] : seg === 5 ? ['0.5 0.9 0.78 1', 'fa-cap-handoff']
+        : seg === 3 ? ['0.24 0.36 0.85 0', id ? `fa-cap-${id}` : ''] : ['0.83 0.3 0.78 0', id ? `fa-cap-${id}` : ''];
+      if (host.dataset.nav !== navPose[0]) { host.dataset.nav = navPose[0]; host.dataset.navM = seg === 5 ? '0.5 0.86 0.6 1' : '0.82 0.42 0.6 0'; }
+      if ((host.dataset.navLook ?? '') !== navPose[1]) host.dataset.navLook = navPose[1];
       if (seg === 5 && t > .9 && !finished.current) { finished.current = true; onFinishRef.current(); }
       if (seg < 5) finished.current = false;
     };
@@ -156,11 +161,12 @@ export function FilmAct({ lang, clips, hMax, soundOn, onCover, onPlan, onFinish 
   const nodes = [
     { at: STARTS[0], label: L(lang, 'Moon', 'Луна') }, { at: STARTS[1] + SEG[1] * .5, label: L(lang, 'Earth', 'Земля') },
     { at: STARTS[2] + SEG[2] * .5, label: L(lang, 'Moon', 'Луна') }, { at: STARTS[4], label: L(lang, 'Mars', 'Марс') },
-    { at: STARTS[5] + SEG[5] * .6, label: L(lang, 'Live', 'Вживую') },
+    { at: STARTS[5] + SEG[5] * .6, label: L(lang, 'Studio', 'Студия') },
   ];
 
   return <section ref={root} className={`fa ${arrived ? 'is-arrived' : ''}`} style={{ height: `${(TOTAL + 1) * 100}svh` }} data-cap={cap} aria-labelledby="hm-title">
     <div className="fa-stage">
+      <div className="fa-backstage" aria-hidden="true" />
       <div className="fa-reel" aria-hidden="true">
         {ordered.map((c, i) => <div key={i} ref={el => { layers.current[i] = el; }} className="fa-clip" style={{ opacity: i === 0 ? 1 : 0 }}>
           {c && (c.sources.length && !stills.current
@@ -190,16 +196,16 @@ export function FilmAct({ lang, clips, hMax, soundOn, onCover, onPlan, onFinish 
         </div>
       </div>
 
-      {captions.map(c => <div key={c.id} className={`fa-cap fa-cap-${c.side ?? 'left'}`} data-on={cap === c.id} aria-hidden={cap !== c.id}>
+      {captions.map(c => <div key={c.id} id={`fa-cap-${c.id}`} className={`fa-cap fa-cap-${c.side ?? 'left'}`} data-on={cap === c.id} aria-hidden={cap !== c.id}>
         {c.kicker && <p className="fa-kicker">{T(c.kicker)}</p>}
         <Decode as="h2" className="fa-h2" text={T(c.title)} on={cap === c.id} speed={22} />
         {c.body && <p className="fa-body">{T(c.body)}</p>}
       </div>)}
 
-      <div className="fa-cap fa-handoff" data-on={cap === 'handoff'}>
+      <div id="fa-cap-handoff" className="fa-cap fa-handoff" data-on={cap === 'handoff'}>
         <p className="fa-kicker">{L(lang, 'End of film · 00:39', 'Конец фильма · 00:39')}</p>
-        <Decode as="h2" className="fa-h2" text={L(lang, 'That was a film.\nWhat follows is live.', 'Это был фильм.\nДальше — вживую.')} on={cap === 'handoff'} speed={22} />
-        <p className="fa-body">{L(lang, 'Measured terrain of the Moon, Mars and their stand-ins on Earth, rendered in your browser. Touch it, light it, plan on it.', 'Измеренный рельеф Луны, Марса и их земных двойников, отрисованный прямо в вашем браузере. Его можно трогать, освещать и планировать на нём.')}</p>
+        <Decode as="h2" className="fa-h2" text={L(lang, 'That was a film.\nNow, the instrument.', 'Это был фильм.\nТеперь — инструмент.')} on={cap === 'handoff'} speed={22} />
+        <p className="fa-body">{L(lang, 'EGIZ compares the measured ground of the Moon and Mars with thousands of places on Earth.', 'EGIZ сравнивает измеренный грунт Луны и Марса с тысячами мест на Земле.')}</p>
       </div>
 
       {/* flight computer */}
