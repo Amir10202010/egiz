@@ -2,19 +2,20 @@
 // choose one to investigate. The surface is a published colour mosaic for orientation only; measured data begins
 // with a site's elevation-model fingerprint and, where packaged, its 3D terrain.
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowRight, Compass, Locate, Minus, Plus, Repeat, X } from 'lucide-react';
+import { ArrowRight, Box, Compass, Locate, Minus, MousePointerClick, Plus, Repeat, X } from 'lucide-react';
 import { t } from '../../i18n';
 import type { TargetEntry } from '../../discover/types';
 import { BODY_LABEL } from '../../planet/terrain/site';
 import { usePlanet, type World } from '../../planet/workspace/store';
 import { arcDeg, type Globe, type LatLon } from '../../planet/journey/globe';
-import { featureValue, FEATURE_INFO, PLACES, WORLD, type Place } from '../../planet/journey/knowledge';
+import { PLACES, WORLD, type Place } from '../../planet/journey/knowledge';
 import { GlobeView, type GlobeMarker } from '../GlobeView';
 import { goStep } from '../actions';
 import { staleItems } from '../journey';
 import { writeExpeditionUrl } from '../url';
 import { StepHead } from '../ExpeditionPage';
 import { fmtLat, fmtLon, KIND, short } from '../format';
+import { EvidenceDots, GravityBar, ReliefBar, SiteSpark, SlopeGauge, SunArc } from '../Infographics';
 
 const OVERVIEW: Record<World, LatLon & { dist: number }> = { moon: { lat: -38, lon: 20, dist: 2.9 }, mars: { lat: 12, lon: 60, dist: 2.9 } };
 const km = (deg: number, w: World) => (deg * Math.PI / 180) * WORLD[w].radiusKm;
@@ -48,7 +49,7 @@ export function ExploreStep({ world, focusId }: { world: World; focusId: string 
 
   return <div className="xp-explore">
     <div className="xp-map">
-      <GlobeView body={world} markers={markers} graticule={graticule} onReady={g => { globe.current = g; setReady(!!g); }} onView={setView} onHover={setHover}
+      <GlobeView body={world} markers={markers} graticule={graticule} enhance={focus ? { lat: focus.lat, lon: focus.lon } : null} onReady={g => { globe.current = g; setReady(!!g); }} onView={setView} onHover={setHover}
         onPick={p => { const hit = targets.find(x => arcDeg(p, x) < (view.dist - 1) * 2.2); if (hit) { focusTarget(hit); return; } setPoint(p); setPlace(null); writeExpeditionUrl({ site: null }); }}>
         <div className="xp-hud xp-hud-tl"><b>{t(BODY_LABEL[world])}</b><span>{targets.length} {t('measured sites')} · {PLACES[world].length} {t('landmarks')}</span>
           <span className="xp-legend"><i className="lg-site" />{t('measured EGIZ site')} <i className="lg-place" />{t('landmark (context only)')}</span></div>
@@ -77,12 +78,19 @@ export function ExploreStep({ world, focusId }: { world: World; focusId: string 
           <p>{t('EGIZ analyses places that have a measured terrain fingerprint. This point is shown on the visual mosaic only: there is no elevation model or climate record for it in this build, so no analysis is offered rather than an invented one.')}</p>
           {(() => { const n = nearest(point); return n && <button className="xp-link" onClick={() => focusTarget(n.x)}>{t('Nearest measured site')}: {short(n.x.name)} · {Math.round(km(n.d, world)).toLocaleString('en')} km<ArrowRight size={13} /></button>; })()}</div>
         : <div className="xp-pad">
-          <StepHead step="explore">{t(WORLD[world].why)}</StepHead>
-          <p className="xp-instruct">{t('Rotate the globe and choose one of the measured sites. Each has an elevation-model fingerprint EGIZ can analyse; landmarks are for orientation.')}</p>
+          <StepHead step="explore">{t(WORLD[world].line)}</StepHead>
+          <div className="ig-row">
+            <GravityBar g={parseFloat(WORLD[world].gravity)} />
+            <figure className="ig ig-count"><figcaption><span>{t('Measured sites')}</span><b>{targets.length}</b></figcaption><div>{targets.map(x => <i key={x.id} title={x.name} />)}</div></figure>
+            <figure className="ig ig-count"><figcaption><span>{t('With 3D terrain')}</span><b>{s.refs.filter(r => r.body === world).length}</b></figcaption><div>{s.refs.filter(r => r.body === world).map(r => <Box key={r.key} size={13} />)}</div></figure>
+          </div>
+          <details className="xp-why"><summary>{t('Why go there?')}</summary><p>{t(WORLD[world].why)}</p></details>
+          <p className="xp-hint"><MousePointerClick size={15} />{t('Pick a ◆ site on the globe or in the list. Bars compare the sites: slope · relief · noon Sun.')}</p>
           {!b && <p role="status" className="xp-dim">{s.discoveryError ?? t('Loading the measured site index…')}</p>}
           <ul className="xp-sites">{targets.map(x => { const r = s.refs.find(z => z.id === x.id); return <li key={x.id}><button onClick={() => focusTarget(x)}>
             <span className="xp-site-name"><b>{short(x.name)}</b><em>{x.name.match(/\((.*)\)/)?.[1] ?? t(KIND[x.kind] ?? x.kind)}</em></span>
-            <span className="xp-site-meta">{fmtLat(x.lat)} · {fmtLon(x.lon)}{r && <i className="xp-badge">3D {r.postingM} m</i>}{s.inv.target === x.id && <i className="xp-badge on">{t('mission site')}</i>}</span></button></li>; })}</ul>
+            <span className="xp-site-meta">{fmtLat(x.lat)} · {fmtLon(x.lon)}{r && <i className="xp-badge">3D {r.postingM} m</i>}{s.inv.target === x.id && <i className="xp-badge on">{t('mission site')}</i>}</span>
+            <SiteSpark x={x} peers={targets.filter(p => p.id !== x.id)} /></button></li>; })}</ul>
         </div>}
     </aside>
   </div>;
@@ -90,9 +98,9 @@ export function ExploreStep({ world, focusId }: { world: World; focusId: string 
 
 /** Short briefing of a focused site with the decision to investigate it (or to change the mission site to it). */
 function Preview({ x, hasTerrain, onClose }: { x: TargetEntry; hasTerrain: boolean; onClose(): void }) {
-  const s = usePlanet(), b = s.bundle!, current = s.inv.target, isCurrent = current === x.id, measured = b.dimensions.filter(d => x.dimension_status[d.id] === 'measured').length;
+  const bundle = usePlanet(st => st.bundle), peers = useMemo(() => bundle?.targets.filter(p => p.body === x.body && p.id !== x.id) ?? [], [bundle, x]);
+  const s = usePlanet(), b = s.bundle!, current = s.inv.target, isCurrent = current === x.id;
   const [confirm, setConfirm] = useState(false); useEffect(() => setConfirm(false), [x.id]);
-  const fine = x.body === 'moon' ? 'f100' : 'f400', facts: [string, number | null, string][] = [[`slope_${fine}_p50_deg`, featureValue(x, `slope_${fine}_p50_deg`), '°'], ['relief_m', featureValue(x, 'relief_m'), ' m'], ['noon_elevation_max_deg', featureValue(x, 'noon_elevation_max_deg'), '°']];
   const choose = () => { usePlanet.getState().investigate(x.id, current ? 'switch' : 'chosen'); goStep('site', x.id); };
   // What the change would put out of date, computed against the hypothetical new site.
   const consequences = current && !isCurrent ? staleItems({ ...s, inv: { ...s.inv, target: x.id }, weights: s.weights } as typeof s) : [];
@@ -102,9 +110,13 @@ function Preview({ x, hasTerrain, onClose }: { x: TargetEntry; hasTerrain: boole
     <h2 className="xp-h2">{short(x.name)}</h2>
     <p className="xp-coord"><Locate size={12} /> {fmtLat(x.lat)} · {fmtLon(x.lon)}</p>
     <p>{x.significance}</p>
-    <dl className="xp-quick">{facts.filter(f => f[1] !== null).map(([k, v, u]) => <div key={k}><dt>{t(FEATURE_INFO[k]?.label ?? k)}</dt><dd>{v!.toFixed(FEATURE_INFO[k]?.digits ?? 1)}{u}</dd></div>)}
-      <div><dt>{t('Dimensions with evidence')}</dt><dd>{measured} / {b.dimensions.length}</dd></div>
-      <div><dt>{t('Measured 3D terrain')}</dt><dd>{hasTerrain ? t('packaged') : t('not packaged')}</dd></div></dl>
+    <div className="ig-grid">
+      <SlopeGauge x={x} />
+      <SunArc x={x} />
+      <ReliefBar x={x} peers={peers} />
+      <EvidenceDots b={b} x={x} />
+    </div>
+    <p className="ig-3d">{hasTerrain ? <><Box size={14} />{t('Measured 3D terrain is packaged for this site')}</> : <span className="xp-dim">{t('No 3D terrain package for this site')}</span>}</p>
     <p className="xp-dim xp-small">{t('From')} {x.dem}.</p>
     {isCurrent ? <button className="eg-button" onClick={() => goStep('site', x.id)}>{t('Continue the investigation')}<ArrowRight size={16} strokeWidth={1.6} /></button>
       : current && !confirm ? <button className="eg-button" onClick={() => setConfirm(true)}><Repeat size={15} />{t('Make this the mission site')}</button>

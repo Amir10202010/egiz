@@ -79,9 +79,10 @@ export function SiteHeader({ availableModes }: { availableModes: DataMode[] }) {
   useEffect(() => {
     if (!menuOpen) return;
     const close = (event: KeyboardEvent) => { if (event.key === 'Escape') { setMenuOpen(false); document.getElementById('navigation-toggle')?.focus(); } };
-    window.addEventListener('keydown', close);
+    const outside = (event: MouseEvent) => { if (!bar.current?.contains(event.target as Node)) setMenuOpen(false); };
+    window.addEventListener('keydown', close); document.addEventListener('mousedown', outside);
     document.documentElement.classList.add('eg-menu-lock');
-    return () => { window.removeEventListener('keydown', close); document.documentElement.classList.remove('eg-menu-lock'); };
+    return () => { window.removeEventListener('keydown', close); document.removeEventListener('mousedown', outside); document.documentElement.classList.remove('eg-menu-lock'); };
   }, [menuOpen]);
   useEffect(() => { setMenuOpen(false); }, [route]);
 
@@ -114,10 +115,9 @@ export function SiteHeader({ availableModes }: { availableModes: DataMode[] }) {
       {GROUPS.map(g => <div key={g.id} className="eg-nav-group">
         <p className="eg-nav-kicker" aria-hidden="true">{t(g.label)}</p>
         <div className="eg-nav-list">
-          {WORKSPACES.filter(w => w.group === g.id).map(w => { const i = links.indexOf(w.route), note = contextNote(w.route); return <button key={w.route} aria-current={section === w.route ? 'page' : undefined} className={section === w.route ? 'active' : ''} style={{ '--i': i } as React.CSSProperties} onClick={() => go(w.route)}>
+          {WORKSPACES.filter(w => w.group === g.id).map(w => { const i = links.indexOf(w.route); return <button key={w.route} aria-current={section === w.route ? 'page' : undefined} className={section === w.route ? 'active' : ''} style={{ '--i': i } as React.CSSProperties} onClick={() => go(w.route)} title={t(contextNote(w.route) ?? w.text)}>
             <span className="eg-nav-index" aria-hidden="true">{String(i + 1).padStart(2, '0')}</span>
             <span className="eg-nav-title">{t(w.title)}</span>
-            <span className="eg-nav-note">{t(note ?? w.text)}</span>
           </button>; })}
         </div>
       </div>)}

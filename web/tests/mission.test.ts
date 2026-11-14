@@ -106,3 +106,18 @@ describe('mission record compatibility', () => {
     expect(() => parseInvestigation(JSON.stringify({ ...inv, journey: { step: 'warp', reached: [] } }))).toThrow(/journey/);
   });
 });
+
+describe('surface enhancement window', async () => {
+  const { windowFor } = await import('../src/expedition/enhance');
+  it('is centred on the place and widens in longitude toward the poles', () => {
+    const eq = windowFor(18.44, 77.45, 4096, 2048, 128), polar = windowFor(-85.43, 31.74, 4096, 2048, 128);
+    expect((eq.box.latMin + eq.box.latMax) / 2).toBeCloseTo(18.44, 6); expect((eq.box.lonMin + eq.box.lonMax) / 2).toBeCloseTo(77.45, 6);
+    expect(eq.box.latMax - eq.box.latMin).toBeCloseTo(11.25, 6); expect(eq.h).toBe(128);
+    expect(polar.box.lonMax - polar.box.lonMin).toBeGreaterThan(eq.box.lonMax - eq.box.lonMin);
+    expect(polar.w).toBeLessThanOrEqual(256);
+  });
+  it('never crosses a pole', () => {
+    const p = windowFor(-89.8, -171.9, 4096, 2048, 128);
+    expect(p.box.latMin).toBe(-90); expect(p.box.latMax - p.box.latMin).toBeCloseTo(11.25, 6);
+  });
+});

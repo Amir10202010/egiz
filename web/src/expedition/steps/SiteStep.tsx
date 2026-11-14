@@ -3,7 +3,7 @@
 // Every value is read from the site's fingerprint in the discovery index with its evidence class and source;
 // challenges are stated by fixed rules over those values, never generated.
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Box, ChevronDown, Locate } from 'lucide-react';
+import { Box, ChevronDown, CircleHelp, Locate, Mountain, MountainSnow, Sun, Waypoints } from 'lucide-react';
 import { t } from '../../i18n';
 import type { TargetEntry } from '../../discover/types';
 import { BODY_LABEL } from '../../planet/terrain/site';
@@ -15,6 +15,9 @@ import { SlopeCdf } from '../SlopeCdf';
 import { openWorkspace } from '../nav';
 import { StepFooter, StepHead } from '../ExpeditionPage';
 import { fmtLat, fmtLon, KIND, short } from '../format';
+import { EvidenceDots, ReliefBar, SlopeGauge, SunArc } from '../Infographics';
+
+const CH_ICON: Record<string, typeof Sun> = { 'Steep ground': Mountain, 'Drivable slopes': Waypoints, 'The Sun stays low': Sun, 'Large relief': MountainSnow, 'No 3D terrain package': Box };
 
 const ev = (e: string) => (e === 'physical_constraint' ? 'assumed' : e);
 interface Challenge { tone: 'risk' | 'caution' | 'info'; title: string; text: string }
@@ -46,7 +49,7 @@ export function SiteStep() {
   const Value = ({ r }: { r: ReturnType<typeof fingerprintRows>[number] }) => <div title={`${t(r.info.explain)} ${t('Source')}: ${r.f.source}`}><dt>{t(r.info.label)}</dt><dd>{formatFeature(r.key, r.f)}<em className={`xp-ev ev-${ev(r.f.evidence)}`}>{t(EVIDENCE_LABEL[r.f.evidence] ?? r.f.evidence)}</em></dd></div>;
   return <div className="xp-site">
     <div className="xp-site-plate">
-      <GlobeView body={x.body} interactive markers={[...peers.map(p => ({ id: p.id, lat: p.lat, lon: p.lon, kind: 'alt' as const, label: short(p.name) })), { id: x.id, lat: x.lat, lon: x.lon, kind: 'site' as const, label: short(x.name), on: true }]} graticule={false} labels="all" onReady={g => { globe.current = g; setReady(!!g); }}>
+      <GlobeView body={x.body} interactive enhance={{ lat: x.lat, lon: x.lon }} markers={[...peers.map(p => ({ id: p.id, lat: p.lat, lon: p.lon, kind: 'alt' as const, label: short(p.name) })), { id: x.id, lat: x.lat, lon: x.lon, kind: 'site' as const, label: short(x.name), on: true }]} graticule={false} labels="all" onReady={g => { globe.current = g; setReady(!!g); }}>
         <p className="xp-hud xp-credit">{t('Colour mosaic for orientation — not a measurement')}</p>
       </GlobeView>
     </div>
@@ -60,20 +63,23 @@ export function SiteStep() {
         <p>{t(WORLD[x.body].why)}</p>
       </Section>
       <Section n={2} title="What is the ground like?">
+        <div className="ig-grid"><SlopeGauge x={x} /><ReliefBar x={x} peers={peers} /></div>
         <SlopeCdf focus={x} peers={peers} />
         <dl className="xp-fp">{rows.filter(r => r.group === 'terrain').map(r => <Value key={r.key} r={r} />)}</dl>
         <p className="xp-dim xp-small">{t('Hover a value for its meaning and source.')}</p>
       </Section>
       <Section n={3} title="Light and environment">
+        <div className="ig-grid"><SunArc x={x} /></div>
         <dl className="xp-fp">{rows.filter(r => r.group !== 'terrain').map(r => <Value key={r.key} r={r} />)}</dl>
         <p className="xp-dim xp-small">{t(WORLD[x.body].sunlight)} · {t('Gravity')} {WORLD[x.body].gravity} · {t('Day')} {t(WORLD[x.body].day)}</p>
       </Section>
       <Section n={4} title="What is measured — and what is missing?">
+        <div className="ig-grid"><EvidenceDots b={b} x={x} /></div>
         <p>{measured} {t('of')} {dims.length} {t('comparison dimensions have evidence for this site.')}</p>
         <ul className="xp-known">{dims.map(d => <li key={d.id} className={`st-${d.status}`}><i aria-hidden="true" /><span><b>{d.label}</b><em>{t(STATUS_LABEL[d.status] ?? d.status)}</em>{d.why && <small>{d.why}</small>}</span></li>)}</ul>
       </Section>
       <Section n={5} title="Challenges these numbers imply">
-        <ul className="xp-insights">{ch.map(c => <li key={c.title} className={`t-${c.tone}`}><b>{t(c.title)}</b><p>{c.text}</p></li>)}</ul>
+        <ul className="xp-insights">{ch.map(c => { const Icon = CH_ICON[c.title] ?? CircleHelp; return <li key={c.title} className={`t-${c.tone}`}><Icon size={18} strokeWidth={1.6} /><div><b>{t(c.title)}</b><p>{c.text}</p></div></li>; })}</ul>
         <p className="xp-dim xp-small">{t('Stated by fixed rules over the measured fingerprint; thresholds are given so you can judge them.')}</p>
       </Section>
       <div className="xp-row">

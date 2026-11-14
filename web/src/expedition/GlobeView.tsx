@@ -1,13 +1,18 @@
 // EGIZ · React host for the planetary globe with HTML markers (real buttons: focusable, labelled,
 // screen-reader visible) that follow the surface every frame without re-rendering React.
 import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { Sparkles } from 'lucide-react';
+import { t } from '../i18n';
 import { Globe, type GlobeBody, type LatLon } from '../planet/journey/globe';
+import { enhancePlace, enhanceSupported, type EnhanceStatus } from './enhance';
 
 export interface GlobeMarker { id: string; lat: number; lon: number; kind: 'site' | 'place' | 'alt'; label: string; sub?: string; on?: boolean; onClick?: () => void }
 const BASE = import.meta.env.BASE_URL;
 
-export function GlobeView({ body, markers = [], interactive = true, spin = false, graticule = true, labels = 'auto', onReady, onPick, onHover, onView, onUserMove, children, className = '' }: {
-  body: GlobeBody; markers?: GlobeMarker[]; interactive?: boolean; spin?: boolean; graticule?: boolean; labels?: 'auto' | 'all' | 'none';
+export function GlobeView({ body, markers = [], interactive = true, spin = false, graticule = true, labels = 'auto', enhance = null, onReady, onPick, onHover, onView, onUserMove, children, className = '' }: {
+  body: GlobeBody; markers?: GlobeMarker[];
+  /** Place whose surface is enhanced on this device (Real-ESRGAN ×4) and laid over the globe; null for none. */
+  enhance?: LatLon | null; interactive?: boolean; spin?: boolean; graticule?: boolean; labels?: 'auto' | 'all' | 'none';
   onReady?: (g: Globe | null) => void; onPick?: (p: LatLon) => void; onHover?: (p: LatLon | null) => void; onView?: (v: { lat: number; lon: number; dist: number }) => void; onUserMove?: () => void; children?: ReactNode; className?: string;
 }) {
   const host = useRef<HTMLDivElement>(null), layer = useRef<HTMLDivElement>(null), globe = useRef<Globe | null>(null), [failed, setFailed] = useState<string | null>(null);
@@ -35,6 +40,18 @@ export function GlobeView({ body, markers = [], interactive = true, spin = false
   }, [body, interactive]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { globe.current?.setSpin(spin); }, [spin]);
   useEffect(() => { globe.current?.setGraticule(graticule); }, [graticule]);
+  // Enhanced surface around the selected place: computed on this device, cross-faded in, never blocking the globe.
+  const [enh, setEnh] = useState<{ status: EnhanceStatus; done: boolean; ep?: string } | null>(null), [ready, setReady] = useState(false);
+  useEffect(() => { if (globe.current) setReady(true); });
+  useEffect(() => {
+    const g = globe.current; if (!g || !ready) return;
+    if (!enhance || !enhanceSupported()) { g.setDetail(null); setEnh(null); return; }
+    let live = true; setEnh({ status: null, done: false });
+    enhancePlace(body, enhance.lat, enhance.lon, st => { if (live) setEnh({ status: st, done: false }); })
+      .then(r => { if (!live || globe.current !== g) return; g.setDetail(r.canvas, r.box); setEnh({ status: null, done: true, ep: r.ep }); })
+      .catch(e => { if (live) setEnh({ status: { stage: 'error', message: e instanceof Error ? e.message : String(e) }, done: false }); });
+    return () => { live = false; };
+  }, [ready, body, enhance?.lat, enhance?.lon]); // eslint-disable-line react-hooks/exhaustive-deps
   // Markers changed: let the next frame place them.
   useEffect(() => { globe.current?.renderNow(); }, [markers]);
   const key = (e: React.KeyboardEvent) => {
@@ -50,6 +67,14 @@ export function GlobeView({ body, markers = [], interactive = true, spin = false
         <i aria-hidden="true" /><span>{m.label}{m.sub && <em>{m.sub}</em>}</span>
       </button>)}
     </div>
+    {enh && <p className={`xp-enhance ${enh.done ? 'done' : ''}`} role="status" title={enh.status?.stage === 'error' ? enh.status.message : undefined}>
+      <Sparkles size={12} aria-hidden="true" />
+      {enh.done ? <>{t('AI-enhanced surface (Real-ESRGAN ×4, on this device) — illustration, not a measurement')}</>
+        : enh.status?.stage === 'error' ? <>{t('Surface enhancement unavailable on this device')}</>
+        : enh.status?.stage === 'download' ? <>{t('Loading the enhancement model (once)')} · {Math.round((enh.status.done / enh.status.total) * 100)} %</>
+        : <>{t('Enhancing the surface image on this device…')}{enh.status?.stage === 'run' && enh.status.total > 1 ? ` ${enh.status.done}/${enh.status.total}` : ''}</>}
+      {!enh.done && enh.status?.stage !== 'error' && <i className="xp-enhance-bar" aria-hidden="true" />}
+    </p>}
     {failed && <p className="xp-globe-failed" role="alert">The 3D globe could not start ({failed}). Every site is still available in the list.</p>}
     {children}
   </div>;

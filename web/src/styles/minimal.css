@@ -4,7 +4,7 @@
  * frames, and explanatory copy shown only when notes are switched on (the "i" in the header).
  * The cinematic home page keeps its own typography. Numbers and coordinates stay monospaced.
  */
-:root:not([data-route="home"]) {
+:root:not([data-route="home"]):not([data-route="explore"]):not([data-route="mission"]) {
   --font-display: Inter, system-ui, sans-serif;
   --ink: #0b0c0d; --ink-1: #0e0f11; --ink-2: #121416; --ink-3: #181a1d;
   --rule: rgba(240, 240, 245, .07); --rule-strong: rgba(240, 240, 245, .16);

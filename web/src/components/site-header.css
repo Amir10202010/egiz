@@ -140,3 +140,20 @@ html.eg-menu-lock { overflow: hidden; }
 .eg-switch .eg-switch-menu button { background: none !important; border-radius: 0 !important; border-left: 0 !important; border-right: 0 !important; border-top: 0 !important; }
 .eg-switch .eg-switch-menu button:hover, .eg-switch .eg-switch-menu button[aria-current=page] { background: rgba(240, 240, 245, .04) !important; }
 .eg-switch .eg-switch-toggle, .eg-switch .eg-mission-chip { border-radius: 0 !important; }
+
+/* ---------- the index as a compact panel under the Menu button (titles only; the page dims behind it) ---------- */
+.eg-header .eg-nav { inset: auto; top: calc(var(--header-h) + 6px); right: var(--gutter); left: auto; bottom: auto; z-index: 70;
+  width: min(720px, calc(100vw - 2 * var(--gutter))); max-height: calc(100dvh - var(--header-h) - 24px); padding: 22px 26px 12px;
+  border: 1px solid var(--rule-strong); background: #050506; box-shadow: 0 0 0 100vmax rgba(0, 0, 0, .6), 0 30px 60px rgba(0, 0, 0, .6); }
+.eg-header .eg-nav::before, .eg-header .eg-nav::after { display: none; }
+.eg-header .eg-nav-mission { margin-bottom: 14px; padding-bottom: 14px; border-bottom: 1px solid var(--rule); }
+.eg-header .eg-nav-mission .eg-nav-kicker { margin-bottom: 6px; }
+.eg-header .eg-nav-mission-line, .eg-header .eg-nav-start { font-size: 18px; }
+.eg-header .eg-nav-group { margin-bottom: 12px; }
+.eg-header .eg-nav-kicker { margin: 0 0 2px; font-size: 9.5px; }
+.eg-header .eg-nav-list { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 28px; }
+.eg-header .eg-nav-group button { grid-template-columns: 26px 1fr; padding: 9px 0; }
+.eg-header .eg-nav-group .eg-nav-title { font-size: 19px; line-height: 1.1; letter-spacing: .04em; }
+.eg-header .eg-nav-index { font-size: 10px; }
+.eg-header .eg-nav button:hover .eg-nav-title { transform: translateX(5px); }
+@media (max-width: 560px) { .eg-header .eg-nav { right: 12px; width: calc(100vw - 24px); padding: 18px 18px 8px; } .eg-header .eg-nav-list { grid-template-columns: 1fr; } }

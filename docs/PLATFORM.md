@@ -28,3 +28,12 @@ The expedition, Earth analogs and 3D terrain always use the measured discovery i
 ## Direct links
 
 Any workspace URL still opens on its own. When a mission exists, the header chip and the index show it, and **Mission Home** is one click away. `#/explore` or `#/mission` with no mission shows the Moon-or-Mars choice.
+
+## On-device surface enhancement
+
+When a site is selected in Explore or Investigate, the globe's colour mosaic around it is upscaled ×4 by Real-ESRGAN x4plus. The model is the official weights exported to ONNX ([SceneWorks/real-esrgan-onnx](https://huggingface.co/SceneWorks/real-esrgan-onnx), BSD-3-Clause) and runs in `workers/enhance.worker.ts` through ONNX Runtime Web: WebGPU when the device has an adapter, WASM otherwise.
+
+- The ~67 MB model is fetched once. It is checked against its published SHA-256 and kept in Cache Storage.
+- The patch is a sphere segment built from the exact latitude/longitude box of the crop (`expedition/enhance.ts`, `Globe.setDetail`). Its edges are feathered and it cross-fades in, so nothing visibly switches.
+- It is labelled as an AI illustration. It is never an input to any calculation.
+- `scripts/copy-ort.mjs` copies the ONNX Runtime WASM binaries to `public/vendor/ort/` for same-origin loading.

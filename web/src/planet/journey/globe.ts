@@ -68,6 +68,30 @@ export class Globe {
   /** Draw immediately (first frame, texture arrival, resize) instead of waiting for the next animation frame. */
   renderNow() { if (!this.alive) return; this.dirty = true; this.tick(performance.now()); }
   setGraticule(on: boolean) { this.grat.visible = on; this.dirty = true; }
+
+  // ── detail patch: an enhanced image laid exactly over its latitude/longitude box, faded in (no visible swap) ──
+  private detail: { mesh: T.Mesh<T.SphereGeometry, T.MeshStandardMaterial>; t0: number; ms: number; from: number; to: number } | null = null;
+  private retired: { mesh: T.Mesh<T.SphereGeometry, T.MeshStandardMaterial>; t0: number; ms: number }[] = [];
+  /** Show `image` over the box (degrees; longitudes may run past ±180). Replaces any previous patch with a cross-fade. */
+  setDetail(image: HTMLCanvasElement | null, box?: { latMin: number; latMax: number; lonMin: number; lonMax: number }, ms = 900) {
+    const now = performance.now(), fade = reduced() ? 1 : ms;
+    if (this.detail) { this.retired.push({ mesh: this.detail.mesh, t0: now, ms: fade }); this.detail = null; }
+    if (image && box) {
+      // three's SphereGeometry: phi runs with longitude exactly as toVec() (phi = lon + 180°), theta from the north pole.
+      const geo = new T.SphereGeometry(1.0006, 96, 64, (box.lonMin + 180) * D, (box.lonMax - box.lonMin) * D, (90 - box.latMax) * D, (box.latMax - box.latMin) * D);
+      const tex = new T.CanvasTexture(image); tex.colorSpace = T.SRGBColorSpace; tex.anisotropy = this.renderer.capabilities.getMaxAnisotropy(); tex.generateMipmaps = true;
+      const mat = new T.MeshStandardMaterial({ map: tex, roughness: 1, metalness: 0, transparent: true, opacity: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
+      const mesh = new T.Mesh(geo, mat); mesh.renderOrder = 1; this.group.add(mesh);
+      this.detail = { mesh, t0: now, ms: fade, from: 0, to: 1 };
+    }
+    this.dirty = true;
+  }
+  private fadeDetail(now: number) {
+    let busy = false;
+    if (this.detail) { const d = this.detail, k = Math.min(1, (now - d.t0) / d.ms); d.mesh.material.opacity = d.from + (d.to - d.from) * ease(k); if (k < 1) busy = true; }
+    this.retired = this.retired.filter(r => { const k = Math.min(1, (now - r.t0) / r.ms); r.mesh.material.opacity = Math.min(r.mesh.material.opacity, 1 - ease(k)); if (k >= 1) { this.group.remove(r.mesh); r.mesh.geometry.dispose(); r.mesh.material.map?.dispose(); r.mesh.material.dispose(); return false; } busy = true; return true; });
+    if (busy) this.dirty = true;
+  }
   setSpin(on: boolean) { this.spin = on && !reduced(); }
 
   /** Animate the view to centre a place. Reduced-motion users get a short cut instead of a flight. */
@@ -93,6 +117,7 @@ export class Globe {
     } else if (!this.dragging && (Math.abs(this.vel.lat) > 1e-3 || Math.abs(this.vel.lon) > 1e-3)) {
       this.view.lat = Math.max(-90, Math.min(90, this.view.lat + this.vel.lat)); this.view.lon += this.vel.lon; this.vel.lat *= 0.92; this.vel.lon *= 0.92; this.dirty = true; this.emitView();
     } else if (this.spin && !this.dragging) { this.view.lon += 0.035; this.dirty = true; }
+    this.fadeDetail(now);
     if (!this.dirty) return; this.dirty = false;
     const v = this.view;
     this.group.rotation.set(v.lat * D, Math.PI / 2 - (v.lon + 180) * D, 0, 'XYZ');

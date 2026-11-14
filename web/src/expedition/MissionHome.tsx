@@ -3,7 +3,7 @@
 // with every EGIZ workspace one click away, opened in the mission's context. Every line is read from the mission's
 // investigation record, the loaded index or the campaign dataset; nothing here is computed for display only.
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowRight, ArrowUpRight, Check, CircleAlert, Download, FolderOpen, Repeat, RotateCcw } from 'lucide-react';
+import { ArrowRight, ArrowUpRight, BookOpen, CircleAlert, Compass, Cpu, Download, Earth, Film, Flag, FolderOpen, GitCompareArrows, Globe2, Moon, Mountain, PenLine, Repeat, RotateCcw, Satellite, Search, ShieldCheck, Sun, Truck, Wrench, type LucideIcon } from 'lucide-react';
 import { t, useLanguage } from '../i18n';
 import { useAppStore, type Route } from '../state/store';
 import { dataModeInfo } from '../data/modes';
@@ -20,9 +20,19 @@ import { STEP_INFO, staleItems, stepState } from './journey';
 import { contextNote, openWorkspace, syncCampaignTarget, WORKSPACES } from './nav';
 import { WorldChoice } from './WorldChoice';
 import { fmtLat, fmtLon, short, utcShort } from './format';
+import { ReliefBar, SlopeGauge, SunArc } from './Infographics';
 import './expedition.css';
 
+const TOOL_ICON: Partial<Record<Route, LucideIcon>> = { explore: Compass, discover: Search, atlas: ShieldCheck, astral: Satellite, planet: Mountain, studio: Moon, lab: Wrench, campaign: Flag, evidence: BookOpen, twin: Sun, home: Film };
+
 interface Action { label: string; why: string; go(): void }
+/** Each next action shows where it leads, with an icon, so it reads as a destination rather than a sentence. */
+const ACTION_META: Record<string, { icon: LucideIcon; where: string }> = {
+  'Choose a site': { icon: Globe2, where: 'Expedition' }, 'Run the site analysis': { icon: Cpu, where: 'Analysis' }, 'Re-run the site analysis': { icon: Cpu, where: 'Analysis' },
+  'Choose Earth analogs': { icon: Earth, where: 'Earth analogs' }, 'Compare alternative sites': { icon: GitCompareArrows, where: 'Alternatives' },
+  'Inspect the terrain in 3D': { icon: Mountain, where: 'Planetary Studio' }, 'Simulate a rover traverse': { icon: Truck, where: 'Planetary Studio' },
+  'Check what the analogs can rehearse': { icon: ShieldCheck, where: 'ATLAS-Π' }, 'Plan the field campaign': { icon: Flag, where: 'Field Campaign' }, 'Record your conclusion': { icon: PenLine, where: 'Below' },
+};
 export default function MissionHome() {
   useLanguage();
   const dataMode = useAppStore(a => a.dataMode), data = useAppStore(a => a.data); usePlanetData(dataMode);
@@ -55,98 +65,128 @@ export default function MissionHome() {
     if (!s.inv.decision?.text) actions.push({ label: 'Record your conclusion', why: 'Write what you conclude and what must be measured next.', go: () => document.getElementById('mh-decide')?.scrollIntoView({ behavior: 'smooth', block: 'center' }) });
   }
   const report = () => downloadText(buildReport(s.inv, { site: s.site, layers: s.layers, discovery: b && x && s.shard?.target === x.id ? { bundle: b, target: x, shard: s.shard, weights, selected: kept.at(-1) ?? null, compare: kept.slice(-4), validation: s.validation } : null, atlasVersion: s.atlas?.version ?? null, generatedUtc: new Date().toISOString() }), `${s.inv.id}-report.md`);
-  const groups: { id: 'mission' | 'workspace' | 'reference'; label: string }[] = [{ id: 'workspace', label: 'Workspaces' }, { id: 'reference', label: 'Background' }];
 
-  return <main className="mh" aria-labelledby="mh-title">
-    <header className="mh-head">
-      <div>
+  const findings = a?.findings ?? [], nCaution = findings.filter(f => f.severity === 'caution').length, nReject = findings.filter(f => f.severity === 'reject').length;
+  const bestFid = agg && kept.length && (!s.inv.analogsFor || s.inv.analogsFor === x?.id) ? Math.max(...kept.map(id => { const k = b!.windows.id.indexOf(id); return k >= 0 ? agg.fidelity[k] : 0; })) : null;
+  const fmax = agg ? Math.max(0.05, ...kept.map(id => { const k = b!.windows.id.indexOf(id); return k >= 0 ? agg.hi[k] : 0; })) : 1;
+  const peers = b && x ? b.targets.filter(p => p.body === x.body && p.id !== x.id) : [];
+
+  return <main className="mh mh-dash" aria-labelledby="mh-title">
+    <header className="mh-top">
+      <div className="mh-top-id">
         <p className="eg-eyebrow"><span className={`xp-body-dot b-${world}`} aria-hidden="true" />{t('Mission Home')} · {t(BODY_LABEL[world])}</p>
         <h1 id="mh-title" className="eg-display">{x ? short(x.name) : t('No site yet')}</h1>
         {x && <p className="mh-coord">{fmtLat(x.lat)} · {fmtLon(x.lon)} · {x.dem}</p>}
-        <label className="mh-title-edit"><span>{t('Mission')}</span><input value={s.inv.title} onChange={e => s.patchInv({ title: e.target.value })} aria-label={t('Mission name')} /></label>
       </div>
-      <div className="mh-head-side">
-        <ol className="mh-progress" aria-label={t('Guided investigation')}>{JOURNEY_STEPS.map(id => { const st = stepState(id, s); return <li key={id} className={`st-${st}`}><button onClick={() => goStep(id)} disabled={id !== 'explore' && !x}><i aria-hidden="true">{st === 'done' ? <Check size={11} strokeWidth={2.4} /> : st === 'stale' ? '!' : ''}</i>{t(STEP_INFO[id].label)}</button></li>; })}</ol>
-        <p className="mh-dim">{done} {t('of')} {JOURNEY_STEPS.length} {t('guided steps complete')} · {t('saved in this browser')} {utcShort(s.inv.updatedUtc)}</p>
+      <div className="mh-top-side">
+        <label className="mh-title-edit"><span>{t('Mission')}</span><input value={s.inv.title} onChange={e => s.patchInv({ title: e.target.value })} aria-label={t('Mission name')} /></label>
         <div className="mh-head-actions">
-          <button className="eg-button quiet" onClick={() => goStep('explore', null)}><Repeat size={14} /><span>{t('Change site')}</span></button>
-          <button className="eg-button quiet" onClick={() => startMission(other)}><span>{t(other === 'moon' ? 'Start a Moon mission' : 'Start a Mars mission')}</span></button>
+          <button className="mh-chip-btn" onClick={() => goStep('explore', null)}><Repeat size={14} />{t('Change site')}</button>
+          <button className="mh-chip-btn" onClick={() => startMission(other)}><Globe2 size={14} />{t(other === 'moon' ? 'Start a Moon mission' : 'Start a Mars mission')}</button>
         </div>
       </div>
     </header>
 
+    {/* KPI strip: one number and one small picture each */}
+    <section className="mh-kpis" aria-label={t('Mission status')}>
+      <button className="mh-kpi" onClick={() => goStep(JOURNEY_STEPS.find(id => stepState(id, s) !== 'done') ?? 'analogs')}>
+        <span className="mh-kpi-l">{t('Investigation')}</span>
+        <span className="mh-ring" style={{ '--p': done / JOURNEY_STEPS.length } as React.CSSProperties}><b>{done}<em>/{JOURNEY_STEPS.length}</em></b></span>
+        <span className="mh-steps-mini">{JOURNEY_STEPS.map(id => <i key={id} className={`st-${stepState(id, s)}`} title={t(STEP_INFO[id].label)} />)}</span>
+      </button>
+      <button className={`mh-kpi ${a ? (current ? '' : 'warn') : 'empty'}`} onClick={() => goStep('analysis')}>
+        <span className="mh-kpi-l">{t('Analysis')}</span>
+        <b className="mh-kpi-v">{a ? a.verdict : '—'}</b>
+        <span className="mh-kpi-s">{a ? <>{nReject > 0 && <i className="sev r">{nReject}</i>}{nCaution > 0 && <i className="sev c">{nCaution}</i>}{current ? utcShort(a.ranUtc).slice(5) : t('out of date')}</> : t('not run')}</span>
+      </button>
+      <button className={`mh-kpi ${kept.length ? '' : 'empty'}`} onClick={() => goStep('analogs')}>
+        <span className="mh-kpi-l">{t('Earth analogs')}</span>
+        <b className="mh-kpi-v">{kept.length}</b>
+        <span className="mh-kpi-s">{bestFid !== null ? <><span className="mh-mini-bar"><i style={{ width: `${Math.min(100, bestFid * 100)}%` }} /></span>{t('best')} {bestFid.toFixed(2)}</> : t('none kept')}</span>
+      </button>
+      <div className="mh-kpi">
+        <span className="mh-kpi-l">{t('Evidence')}</span>
+        <b className="mh-kpi-v">{b && x ? b.dimensions.length - missing.length : '—'}<em>/{b?.dimensions.length ?? '—'}</em></b>
+        <span className="mh-dots">{b && x && b.dimensions.map(d => <i key={d.id} className={`st-${x.dimension_status[d.id] ?? 'not_assessed'}`} title={d.label} />)}</span>
+      </div>
+      <button className={`mh-kpi ${s.inv.experiments.length ? '' : 'empty'}`} onClick={() => openWorkspace(ref ? 'planet' : 'lab')}>
+        <span className="mh-kpi-l">{t('Simulations')}</span>
+        <b className="mh-kpi-v">{s.inv.experiments.length}</b>
+        <span className="mh-kpi-s">{campaign ? `${t('campaign')} ${Math.round(campaign.coverage * 100)} %` : t('none saved')}</span>
+      </button>
+      <button className={`mh-kpi ${stale.length ? 'warn' : ''}`} onClick={() => document.getElementById('mh-gaps')?.scrollIntoView({ behavior: 'smooth', block: 'center' })}>
+        <span className="mh-kpi-l">{t('Open issues')}</span>
+        <b className="mh-kpi-v">{missing.length + stale.length}</b>
+        <span className="mh-kpi-s">{stale.length ? `${stale.length} ${t('to recalculate')}` : `${missing.length} ${t('data gaps')}`}</span>
+      </button>
+    </section>
+
     {stale.length > 0 && <section className="mh-stale" aria-label={t('Needs recalculation')}>
-      <h2 className="mh-h2"><CircleAlert size={16} />{t('Needs recalculation')}</h2>
-      <ul>{stale.map(z => <li key={z.what}><div><b>{t(z.what)}</b><span>{z.why}</span></div><button className="eg-button quiet" onClick={() => (z.fix.step ? goStep(z.fix.step) : openWorkspace(z.fix.route ?? 'planet'))}><span>{t(z.fix.label)}</span><ArrowRight size={14} /></button></li>)}</ul>
+      <CircleAlert size={16} />
+      <ul>{stale.map(z => <li key={z.what}><b>{t(z.what)}</b><span>{z.why}</span><button className="mh-chip-btn" onClick={() => (z.fix.step ? goStep(z.fix.step) : openWorkspace(z.fix.route ?? 'planet'))}>{t(z.fix.label)}<ArrowRight size={13} /></button></li>)}</ul>
     </section>}
 
-    <div className="mh-grid">
-      <section className="mh-next" aria-labelledby="mh-next">
+    <div className="mh-board">
+      <section className="mh-panel mh-next" aria-labelledby="mh-next">
         <h2 id="mh-next" className="mh-h2">{t('Next actions')}</h2>
-        <ol>{actions.slice(0, 5).map((z, i) => <li key={z.label}><button onClick={z.go}><span className="mh-n">{String(i + 1).padStart(2, '0')}</span><span><b>{t(z.label)}</b><em>{t(z.why)}</em></span><ArrowRight size={16} strokeWidth={1.6} /></button></li>)}</ol>
+        <ol>{actions.slice(0, 4).map((z, i) => { const m = ACTION_META[z.label], Icon = m?.icon ?? ArrowRight, where = z.label === 'Simulate a rover traverse' && !ref ? 'Engineering Lab' : m?.where; return <li key={z.label} className={i === 0 ? 'first' : ''}><button onClick={z.go}><span className="mh-ico" aria-hidden="true"><Icon size={20} strokeWidth={1.5} /></span><span className="mh-act"><b>{t(z.label)}</b><em>{t(z.why)}</em></span><span className="mh-go">{where && <span>{t(where)}</span>}<ArrowRight size={16} strokeWidth={1.8} /></span></button></li>; })}</ol>
       </section>
 
-      <section className="mh-findings" aria-labelledby="mh-findings">
+      <section className="mh-panel mh-site" aria-labelledby="mh-site">
+        <h2 id="mh-site" className="mh-h2">{t('The site')}</h2>
+        {x && b ? <div className="ig-grid ig-grid-1"><SlopeGauge x={x} /><SunArc x={x} /><ReliefBar x={x} peers={peers} /></div> : <p className="mh-dim">{t('Choose a site to see its measured terrain.')}</p>}
+        {ref && <button className="mh-chip-btn" onClick={() => openWorkspace('planet')}><Mountain size={14} />{t('Open measured 3D terrain')} · {ref.postingM} m</button>}
+      </section>
+
+      <section className="mh-panel mh-findings" aria-labelledby="mh-findings">
         <h2 id="mh-findings" className="mh-h2">{t('Scientific findings')}</h2>
-        {a ? <>
-          <p className="mh-verdict">{t('Critic verdict')} <b>{a.verdict}</b> · {t('profile')} “{t(b?.profiles[a.profile]?.label ?? a.profile)}” · {utcShort(a.ranUtc)}{!current && <span className="mh-warn"> · {t('out of date')}</span>}</p>
-          <ul className="mh-list">{a.findings.slice(0, 5).map(f => <li key={f.title} className={`f-${f.severity}`}><b>{f.title}</b><span>{f.detail}</span></li>)}</ul>
-          <p className="mh-dim">{t('Leading Earth windows')}: {a.top10.slice(0, 3).join(', ')} · {t('index')} <code>{a.bundleSha.slice(0, 10)}</code></p>
-          <button className="mh-link" onClick={() => goStep('analysis')}>{t('Inspect every step and statistic')}<ArrowUpRight size={12} /></button>
-        </> : <p className="mh-dim">{t('No analysis has been run for this mission yet.')}</p>}
+        {a ? <ul className="mh-sev">{findings.slice(0, 6).map(f => <li key={f.title} className={`f-${f.severity}`} title={f.detail}><i aria-hidden="true" /><b>{f.title}</b></li>)}</ul> : <p className="mh-dim">{t('No analysis has been run for this mission yet.')}</p>}
+        {a && <button className="mh-link" onClick={() => goStep('analysis')}>{t('Inspect every step and statistic')}<ArrowUpRight size={12} /></button>}
       </section>
 
-      <section className="mh-analogs" aria-labelledby="mh-analogs">
+      <section className="mh-panel mh-analogs" aria-labelledby="mh-analogs">
         <h2 id="mh-analogs" className="mh-h2">{t('Earth analogs')}</h2>
-        {kept.length ? <ol className="mh-list">{kept.map(id => { const k = b ? b.windows.id.indexOf(id) : -1; return <li key={id}><b>{k >= 0 ? b!.windows.name[k] : id}</b><span>{k >= 0 ? `${b!.windows.country[k] ?? '—'} · ${b!.windows.lat[k].toFixed(2)}°, ${b!.windows.lon[k].toFixed(2)}°` : ''}{agg && k >= 0 ? ` · ${t('fidelity')} ${agg.fidelity[k].toFixed(3)} (${agg.lo[k].toFixed(3)}–${agg.hi[k].toFixed(3)}) · ${t('coverage')} ${(agg.coverage[k] * 100).toFixed(0)} %` : ''}</span></li>; })}</ol>
+        {kept.length ? <ol className="mh-bars">{kept.map(id => { const k = b ? b.windows.id.indexOf(id) : -1; return <li key={id}><span className="mh-bars-l"><b>{k >= 0 ? b!.windows.name[k] : id}</b><em>{k >= 0 ? b!.windows.country[k] ?? '' : ''}</em></span>
+          {agg && k >= 0 ? <span className="mh-bars-v"><span className="xp-int"><i style={{ left: `${(agg.lo[k] / fmax) * 100}%`, width: `${((agg.hi[k] - agg.lo[k]) / fmax) * 100}%` }} /><b style={{ left: `${(agg.fidelity[k] / fmax) * 100}%` }} /></span><em>{agg.fidelity[k].toFixed(2)}</em></span> : <span />}</li>; })}</ol>
           : <p className="mh-dim">{t('No Earth analog kept yet.')}</p>}
         {s.inv.analogsFor && x && s.inv.analogsFor !== x.id && <p className="mh-warn">{t('Ranked for a previous site — review them.')}</p>}
         <button className="mh-link" onClick={() => goStep('analogs')}>{t('Explore Earth analogs on the map')}<ArrowUpRight size={12} /></button>
       </section>
 
-      <section className="mh-sims" aria-labelledby="mh-sims">
+      <section id="mh-gaps" className="mh-panel mh-gaps" aria-labelledby="mh-gaps-h">
+        <h2 id="mh-gaps-h" className="mh-h2">{t('Open questions and data gaps')}</h2>
+        <ul className="mh-tags">{missing.map(d => <li key={d.id} className={`st-${d.status}`} title={d.next ?? ''}>{d.label}</li>)}<li title={t('Slope and roughness below the elevation-model baseline are not resolved; field verification is needed along any route.')}>{t('Vehicle-scale terrain')}</li><li title={t('Simulated slip and sinkage are not validated without in-situ bearing and shear tests.')}>{t('Soil mechanics')}</li></ul>
+      </section>
+
+      <section className="mh-panel mh-sims" aria-labelledby="mh-sims">
         <h2 id="mh-sims" className="mh-h2">{t('Simulation results')}</h2>
-        {s.inv.experiments.length ? <ul className="mh-list">{s.inv.experiments.map(e => <li key={e.id}><b>{e.name}</b><span>{e.summary.outcome} · {(e.summary.distanceM / 1000).toFixed(2)} km · {(e.summary.durationS / 3600).toFixed(1)} h · {Math.round(e.summary.energyUsedWh)} Wh · {e.site.id} <em className="xp-ev ev-simulated">simulated</em></span></li>)}</ul>
-          : <p className="mh-dim">{t('No saved rover experiment yet.')}</p>}
-        {campaign && <p className="mh-campaign"><b>{t('Field campaign')}</b> · k = {campaign.k} · {Math.round(campaign.coverage * 100)} % {t('coverage')} · {campaign.sites.map(z => t(siteName(z.id))).join(', ')} <span className="mh-dim">({t(dataModeInfo[dataMode].label)}{appTarget ? `, ${short(appTarget.name.split(/[/,]/)[0]).trim()}` : ''})</span></p>}
+        {s.inv.experiments.length ? <ul className="mh-list">{s.inv.experiments.slice(-3).map(e => <li key={e.id}><b>{e.name}</b><span>{e.summary.outcome} · {(e.summary.distanceM / 1000).toFixed(2)} km · {Math.round(e.summary.energyUsedWh)} Wh <em className="xp-ev ev-simulated">simulated</em></span></li>)}</ul> : <p className="mh-dim">{t('No saved rover experiment yet.')}</p>}
+        {campaign && <div className="mh-camp"><span className="mh-kpi-l">{t('Field campaign')} · k = {campaign.k}</span><span className="mh-mini-bar wide"><i style={{ width: `${campaign.coverage * 100}%` }} /></span><b>{Math.round(campaign.coverage * 100)} %</b><span className="mh-dim">{campaign.sites.map(z => t(siteName(z.id))).join(' · ')} ({t(dataModeInfo[dataMode].label)})</span></div>}
+        {template && <ul className="mh-tags obj">{template.objectives.map(o => <li key={o.id}>{t(o.name)}</li>)}</ul>}
       </section>
-
-      <section className="mh-gaps" aria-labelledby="mh-gaps">
-        <h2 id="mh-gaps" className="mh-h2">{t('Open questions and data gaps')}</h2>
-        <ul className="mh-list">{missing.map(d => <li key={d.id}><b>{d.label}</b><span>{t(d.status.replace('_', ' '))}{d.next ? ` — ${d.next}` : ''}</span></li>)}
-          <li><b>{t('Vehicle-scale terrain')}</b><span>{t('Slope and roughness below the elevation-model baseline are not resolved; field verification is needed along any route.')}</span></li>
-          <li><b>{t('Soil mechanics')}</b><span>{t('Simulated slip and sinkage are not validated without in-situ bearing and shear tests.')}</span></li>
-          {s.inv.answers.slice(-3).map(q => <li key={q.id + q.question}><b>{q.question}</b><span>{t(q.verdict)} · {q.results[0]?.summary}</span></li>)}</ul>
-      </section>
-
-      {template && <section className="mh-objectives" aria-labelledby="mh-obj">
-        <h2 id="mh-obj" className="mh-h2">{t('Mission objectives')}</h2>
-        <ul className="mh-list">{template.objectives.map(o => <li key={o.id}><b>{t(o.name)}</b>{o.description && o.description !== o.name && <span>{t(o.description)}</span>}</li>)}</ul>
-        <button className="mh-link" onClick={() => openWorkspace('campaign')}>{t('Weigh objectives in Field Campaign')}<ArrowUpRight size={12} /></button>
-      </section>}
     </div>
 
     <section className="mh-tools" aria-labelledby="mh-tools">
       <h2 id="mh-tools" className="mh-h2">{t('Every EGIZ workspace, in this mission’s context')}</h2>
-      {groups.map(g => <div key={g.id} className="mh-tool-group"><p className="eg-eyebrow">{t(g.label)}</p>
-        <ul>{WORKSPACES.filter(w => w.group === g.id).map(w => { const note = contextNote(w.route); return <li key={w.route}><button onClick={() => openWorkspace(w.route as Route)}>
-          <span className="mh-tool-title">{t(w.title)}</span><span className="mh-tool-text">{t(w.text)}</span>{note && <span className="mh-tool-ctx">{t(note)}</span>}<ArrowUpRight size={18} strokeWidth={1.4} aria-hidden="true" /></button></li>; })}</ul></div>)}
+      <ul className="mh-tiles">{WORKSPACES.filter(w => w.route !== 'mission').map(w => { const Icon = TOOL_ICON[w.route] ?? ArrowUpRight, note = contextNote(w.route); return <li key={w.route}><button onClick={() => openWorkspace(w.route as Route)} title={t(w.text)}>
+        <Icon size={20} strokeWidth={1.5} aria-hidden="true" /><b>{t(w.title)}</b><em>{t(note ?? w.text)}</em></button></li>; })}</ul>
     </section>
 
-    <section id="mh-decide" className="mh-decide" aria-labelledby="mh-decide-h">
-      <h2 id="mh-decide-h" className="mh-h2">{t('Your conclusion')}</h2>
-      <textarea rows={4} value={draft} onChange={e => setDraft(e.target.value)} placeholder={t('What do you conclude, and what is the next investigation?')} aria-label={t('Conclusion')} />
-      <div className="xp-row"><button className="eg-button" disabled={!draft.trim() || draft === s.inv.decision?.text} onClick={() => { s.patchInv({ decision: { text: draft.trim(), utc: new Date().toISOString().replace(/\.\d+Z$/, 'Z') } }); s.log('decision', `Recorded the conclusion: “${draft.trim().slice(0, 140)}”`); }}>{t('Record conclusion')}</button>
-        {s.inv.decision && <span className="mh-dim">{t('Recorded')} {utcShort(s.inv.decision.utc)}</span>}
-        <button className="eg-button quiet" onClick={report}><Download size={14} /><span>{t('Report (Markdown)')}</span></button>
-        <button className="eg-button quiet" onClick={() => downloadText(serializeInvestigation(s.inv), `${s.inv.id}.json`, 'application/json')}><Download size={14} /><span>{t('Mission record (JSON)')}</span></button></div>
-    </section>
-
-    <section className="mh-records" aria-labelledby="mh-records">
-      <h2 id="mh-records" className="mh-h2">{t('Saved missions')}</h2>
-      <ul className="mh-list">{s.saved.slice(0, 8).map(e => <li key={e.id} className={e.id === s.inv.id ? 'on' : ''}><b>{e.title}</b><span>{utcShort(e.updatedUtc)}{e.id === s.inv.id ? ` · ${t('open')}` : ''}</span>{e.id !== s.inv.id && <button className="mh-link" onClick={() => { const err = usePlanet.getState().openInvestigation(e.id); if (err) alert(err); }}><FolderOpen size={12} />{t('Open')}</button>}</li>)}</ul>
-      {(s.inv.trail?.length ?? 0) > 0 && <details className="mh-trail"><summary>{t('Investigation trail')} ({s.inv.trail!.length})</summary><ol>{s.inv.trail!.slice(-40).reverse().map((e, i) => <li key={i}><time>{e.utc.slice(5, 16).replace('T', ' ')}</time>{e.text}</li>)}</ol></details>}
-      <p className="mh-dim">{t('The guided expedition, Earth analogs and 3D terrain always use the measured index. The data source')} ({t(dataModeInfo[dataMode].label)}) {t('applies to Field Campaign, Engineering Lab and ATLAS-Π.')} <button className="mh-link" onClick={() => { usePlanet.getState().newInvestigation(); }}><RotateCcw size={12} />{t('Start over')}</button></p>
-    </section>
+    <div className="mh-foot">
+      <section id="mh-decide" className="mh-panel mh-decide" aria-labelledby="mh-decide-h">
+        <h2 id="mh-decide-h" className="mh-h2">{t('Your conclusion')}</h2>
+        <textarea rows={3} value={draft} onChange={e => setDraft(e.target.value)} placeholder={t('What do you conclude, and what is the next investigation?')} aria-label={t('Conclusion')} />
+        <div className="xp-row"><button className="eg-button" disabled={!draft.trim() || draft === s.inv.decision?.text} onClick={() => { s.patchInv({ decision: { text: draft.trim(), utc: new Date().toISOString().replace(/\.\d+Z$/, 'Z') } }); s.log('decision', `Recorded the conclusion: “${draft.trim().slice(0, 140)}”`); }}>{t('Record conclusion')}</button>
+          {s.inv.decision && <span className="mh-dim">{t('Recorded')} {utcShort(s.inv.decision.utc)}</span>}
+          <button className="mh-chip-btn" onClick={report}><Download size={14} />{t('Report (Markdown)')}</button>
+          <button className="mh-chip-btn" onClick={() => downloadText(serializeInvestigation(s.inv), `${s.inv.id}.json`, 'application/json')}><Download size={14} />{t('Mission record (JSON)')}</button></div>
+      </section>
+      <section className="mh-panel mh-records" aria-labelledby="mh-records">
+        <h2 id="mh-records" className="mh-h2">{t('Saved missions')}</h2>
+        <ul className="mh-list">{s.saved.slice(0, 5).map(e => <li key={e.id} className={e.id === s.inv.id ? 'on' : ''}><b>{e.title}</b><span>{utcShort(e.updatedUtc)}{e.id === s.inv.id ? ` · ${t('open')}` : ''}</span>{e.id !== s.inv.id && <button className="mh-link" onClick={() => { const err = usePlanet.getState().openInvestigation(e.id); if (err) alert(err); }}><FolderOpen size={12} />{t('Open')}</button>}</li>)}</ul>
+        {(s.inv.trail?.length ?? 0) > 0 && <details className="mh-trail"><summary>{t('Investigation trail')} ({s.inv.trail!.length})</summary><ol>{s.inv.trail!.slice(-40).reverse().map((e, i) => <li key={i}><time>{e.utc.slice(5, 16).replace('T', ' ')}</time>{e.text}</li>)}</ol></details>}
+        <p className="mh-dim mh-small">{t('The guided expedition, Earth analogs and 3D terrain always use the measured index. The data source')} ({t(dataModeInfo[dataMode].label)}) {t('applies to Field Campaign, Engineering Lab and ATLAS-Π.')} <button className="mh-link" onClick={() => { usePlanet.getState().newInvestigation(); }}><RotateCcw size={12} />{t('Start over')}</button></p>
+      </section>
+    </div>
   </main>;
 }
