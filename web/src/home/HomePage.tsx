@@ -247,15 +247,15 @@ export function HomePage() {
       <div className="hm-hero-shade" aria-hidden="true" />
       <div className="hm-hero-grid">
         <div className="hm-hero-copy">
-          <p className="eg-eyebrow hm-rise" style={{ '--d': '120ms' } as React.CSSProperties}>{L(lang, 'Egiz — analogue campaign designer', 'Egiz — проектировщик аналоговых кампаний')}</p>
+          <p className="eg-eyebrow hm-rise" style={{ '--d': '120ms' } as React.CSSProperties}>{L(lang, 'Egiz · Training grounds for the Moon and Mars', 'Egiz · Земные полигоны для Луны и Марса')}</p>
           <h1 id="hm-title" className="eg-display hm-hero-title">
-            <span className="hm-line"><span style={{ '--d': '220ms' } as React.CSSProperties}>{L(lang, 'Rehearse', 'Репетиция')}</span></span>
-            <span className="hm-line"><span key={destination} className="hm-swap" style={{ '--d': '320ms' } as React.CSSProperties}>{destination === 'mars' ? L(lang, 'Mars', 'Марса') : L(lang, 'the Moon', 'Луны')}</span></span>
-            <span className="hm-line"><span style={{ '--d': '420ms' } as React.CSSProperties}>{L(lang, 'on Earth', 'на Земле')}</span></span>
+            <span className="hm-line"><span key={destination} className="hm-swap" style={{ '--d': '220ms' } as React.CSSProperties}>{destination === 'mars' ? L(lang, 'Mars', 'Марс') : L(lang, 'The Moon', 'Луна')}</span></span>
+            <span className="hm-line"><span style={{ '--d': '320ms' } as React.CSSProperties}>{L(lang, 'starts', 'начинается')}</span></span>
+            <span className="hm-line"><span style={{ '--d': '420ms' } as React.CSSProperties}>{L(lang, 'here.', 'здесь.')}</span></span>
           </h1>
           <p className="hm-hero-lede hm-rise" style={{ '--d': '600ms' } as React.CSSProperties}>{L(lang,
-            'Egiz finds the smallest set of places on Earth that can rehearse a mission — and states, plainly, what Earth can never test.',
-            'Egiz находит минимальный набор мест на Земле, где можно отрепетировать миссию, — и честно показывает, что Земля проверить не может.')}</p>
+            'Every step on another world is rehearsed on this one first. Egiz finds the ground on Earth that comes closest — and says plainly what no place on Earth can teach.',
+            'Каждый шаг по другому миру сначала репетируют на этом. Egiz находит на Земле самый близкий грунт — и прямо говорит, чему Земля не научит никогда.')}</p>
           {currentTarget && <p className="hm-hero-coord hm-rise" style={{ '--d': '760ms' } as React.CSSProperties}><span>{currentTarget.name.split(/[/,]/)[0].trim()}</span>{latLon(lang, currentTarget.lat, currentTarget.lon)}</p>}
         </div>
 
@@ -295,17 +295,17 @@ export function HomePage() {
 
     {/* 02 — Thesis */}
     <section id="hm-thesis" className="hm-thesis hm-wrap" data-film-anchor>
-      <p className="eg-eyebrow" data-reveal>{L(lang, '01 / The problem', '01 / Задача')}</p>
+      <p className="eg-eyebrow" data-reveal>{L(lang, '01 / The question', '01 / Вопрос')}</p>
       <h2 className="hm-statement" data-reveal><Words>{L(lang,
-        'Every crew that leaves Earth trains on it first. The hard question is where — and what that rehearsal can never prove.',
-        'Каждый экипаж, покидающий Землю, сначала тренируется на ней. Сложный вопрос — где именно, и что такая репетиция никогда не докажет.')}</Words></h2>
+        'Before anyone walks on another world, someone has to find where on Earth to practise. That is the problem Egiz solves.',
+        'Прежде чем человек ступит на другой мир, кто-то должен найти, где на Земле к этому готовиться. Эту задачу и решает Egiz.')}</Words></h2>
       <div className="hm-thesis-cols">
         <p data-reveal>{L(lang,
-          `Egiz scores ${tiles.toLocaleString(lang)} candidate Earth sites against a mission's objectives on NASA-defined baselines, then searches for the smallest campaign — one, two or three sites — that covers the most.`,
-          `Egiz оценивает ${tiles.toLocaleString(lang)} земных площадок-кандидатов по целям миссии на базовых линиях NASA и ищет минимальную кампанию — одну, две или три площадки, — которая покрывает больше всего.`)}</p>
+          `${tiles.toLocaleString(lang)} places on Earth, measured against what the mission demands. Out come the one, two or three that cover the most.`,
+          `${tiles.toLocaleString(lang)} мест на Земле — против того, что требует миссия. На выходе одна, две или три площадки, которые покрывают больше всего.`)}</p>
         <p data-reveal>{L(lang,
-          'Whatever no site on Earth can reproduce is written into a gap ledger, with the laboratory alternative that can.',
-          'Всё, что не может воспроизвести ни одна площадка на Земле, вносится в реестр пробелов — вместе с лабораторной альтернативой.')}</p>
+          'And what no place on Earth can give is written down too — with the laboratory that can.',
+          'А то, чего не даст ни одно место на Земле, тоже записано — вместе с лабораторией, которая сможет.')}</p>
       </div>
       {synthetic && <p className="hm-note" data-reveal>{L(lang, 'Showing synthetic demo data — not NASA observations.', 'Показаны синтетические демо-данные — не наблюдения NASA.')}</p>}
     </section>
@@ -314,8 +314,8 @@ export function HomePage() {
     <section className="hm-plate hm-window" aria-labelledby="hm-twin">
       <div className="hm-plate-copy hm-wrap">
         <p className="eg-eyebrow" data-reveal>{L(lang, 'The stand-in', 'Двойник')}</p>
-        <h2 id="hm-twin" className="eg-display hm-h2" data-reveal><Words>{L(lang, 'Same light. Another world.', 'Тот же свет. Другой мир.')}</Words></h2>
-        <p className="hm-body" data-reveal>{L(lang, 'The lunar plain turns into a desert salt pan. Crews rehearse here before they ever leave Earth.', 'Лунная равнина превращается в солончак пустыни. Здесь экипажи репетируют, прежде чем покинуть Землю.')}</p>
+        <h2 id="hm-twin" className="eg-display hm-h2" data-reveal><Words>{L(lang, 'This is not the Moon.', 'Это не Луна.')}</Words></h2>
+        <p className="hm-body" data-reveal>{L(lang, 'It is Death Valley. The same low light, the same broken ground — and it is a drive away.', 'Это Долина Смерти. Тот же низкий свет, тот же изломанный грунт — и до него можно доехать.')}</p>
       </div>
     </section>
 
@@ -366,8 +366,8 @@ export function HomePage() {
     {mars && <section className="hm-plate hm-window" aria-labelledby="hm-mars-twin" data-film-anchor>
       <div className="hm-plate-copy hm-wrap">
         <p className="eg-eyebrow" data-reveal>{L(lang, 'The twin of Mars', 'Двойник Марса')}</p>
-        <h2 id="hm-mars-twin" className="eg-display hm-h2" data-reveal><Words>{L(lang, 'Mars has one too.', 'У Марса он тоже есть.')}</Words></h2>
-        {marsTwinName && <p className="hm-body" data-reveal>{L(lang, `The closest ground to Jezero on Earth: ${marsTwinName}.`, `Самый близкий к Езеро грунт на Земле — ${marsTwinName}.`)}</p>}
+        <h2 id="hm-mars-twin" className="eg-display hm-h2" data-reveal><Words>{L(lang, 'Mars has a twin here.', 'У Марса есть двойник здесь.')}</Words></h2>
+        {marsTwinName && <p className="hm-body" data-reveal>{L(lang, `${marsTwinName}. Found from measured slopes and relief, not by eye.`, `${marsTwinName}. Это место нашли по измеренным уклонам и рельефу, а не на глаз.`)}</p>}
       </div>
     </section>}
 
@@ -375,12 +375,12 @@ export function HomePage() {
     <section className="hm-method hm-wrap" aria-labelledby="hm-method" data-film-anchor>
       <div className="hm-method-head">
         <p className="eg-eyebrow" data-reveal>{L(lang, '04 / Method', '04 / Метод')}</p>
-        <h2 id="hm-method" className="eg-display hm-h2" data-reveal><Words>{L(lang, 'Constrain. Compute. Confess.', 'Ограничить. Рассчитать. Признать.')}</Words></h2>
+        <h2 id="hm-method" className="eg-display hm-h2" data-reveal><Words>{L(lang, 'Ask. Search. Tell the truth.', 'Спросить. Найти. Сказать правду.')}</Words></h2>
       </div>
       <ol className="hm-steps">
-        <li data-reveal><span className="hm-step-n">01</span><h3>{L(lang, 'Constrain', 'Ограничить')}</h3><p>{L(lang, 'Pick a mission template. Each objective names the terrain, light and thermal conditions it needs, on a fine and a 2 km baseline.', 'Выберите шаблон миссии. Каждая цель задаёт нужный рельеф, освещение и температуру — на малой базе и на базе 2 км.')}</p></li>
-        <li data-reveal><span className="hm-step-n">02</span><h3>{L(lang, 'Compute', 'Рассчитать')}</h3><p>{L(lang, `Score ${tiles.toLocaleString(lang)} Earth tiles, then search exactly for the k = 1–3 site campaign with the highest coverage.`, `Оценить ${tiles.toLocaleString(lang)} земных участков и точно найти кампанию из k = 1–3 площадок с наибольшим покрытием.`)}</p></li>
-        <li data-reveal><span className="hm-step-n">03</span><h3>{L(lang, 'Confess', 'Признать')}</h3><p>{L(lang, 'Report the ceiling Earth can reach for each objective, and list every condition that has to move to a lab.', 'Показать предел, которого Земля достигает по каждой цели, и перечислить всё, что придётся перенести в лабораторию.')}</p></li>
+        <li data-reveal><span className="hm-step-n">01</span><h3>{L(lang, 'Ask', 'Спросить')}</h3><p>{L(lang, 'Pick a mission template. Each objective names the terrain, light and thermal conditions it needs, on a fine and a 2 km baseline.', 'Выберите шаблон миссии. Каждая цель задаёт нужный рельеф, освещение и температуру — на малой базе и на базе 2 км.')}</p></li>
+        <li data-reveal><span className="hm-step-n">02</span><h3>{L(lang, 'Search', 'Найти')}</h3><p>{L(lang, `Score ${tiles.toLocaleString(lang)} Earth tiles, then search exactly for the k = 1–3 site campaign with the highest coverage.`, `Оценить ${tiles.toLocaleString(lang)} земных участков и точно найти кампанию из k = 1–3 площадок с наибольшим покрытием.`)}</p></li>
+        <li data-reveal><span className="hm-step-n">03</span><h3>{L(lang, 'Tell the truth', 'Сказать правду')}</h3><p>{L(lang, 'Report the ceiling Earth can reach for each objective, and list every condition that has to move to a lab.', 'Показать предел, которого Земля достигает по каждой цели, и перечислить всё, что придётся перенести в лабораторию.')}</p></li>
       </ol>
       <div className="hm-results">
         {[{ t: moon, c: moonCampaign }, { t: mars, c: marsCampaign }].filter(x => x.t && x.c).map(({ t, c }) => <article key={t!.id} className="hm-result" data-reveal>
@@ -399,8 +399,8 @@ export function HomePage() {
     {gapRows.length > 0 && <section className="hm-gaps hm-wrap" aria-labelledby="hm-gaps">
       <div className="hm-gaps-head">
         <p className="eg-eyebrow" data-reveal>{L(lang, '05 / Gap ledger', '05 / Реестр пробелов')}</p>
-        <h2 id="hm-gaps" className="eg-display hm-h2" data-reveal><Words>{L(lang, 'What Earth cannot test', 'Что Земля не может проверить')}</Words></h2>
-        <p className="hm-body" data-reveal>{L(lang, 'No analogue site closes these gaps. Egiz names each one and the facility that can.', 'Ни одна аналоговая площадка не закрывает эти пробелы. Egiz называет каждый — и установку, которая может.')}</p>
+        <h2 id="hm-gaps" className="eg-display hm-h2" data-reveal><Words>{L(lang, 'Where Earth runs out.', 'Где Земля заканчивается.')}</Words></h2>
+        <p className="hm-body" data-reveal>{L(lang, 'No desert lowers gravity. No glacier is a vacuum. Egiz names every gap — and the facility that closes it.', 'Ни одна пустыня не ослабит гравитацию. Ни один ледник не станет вакуумом. Egiz называет каждый пробел — и установку, которая его закроет.')}</p>
       </div>
       <ol className="hm-ledger">
         {gapRows.map((g, i) => <li key={g.gap} data-reveal>
@@ -415,7 +415,7 @@ export function HomePage() {
     <section className="hm-plate hm-window hm-window-top" aria-labelledby="hm-earth" data-film-anchor>
       <div className="hm-plate-copy hm-wrap">
         <p className="eg-eyebrow" data-reveal>{L(lang, '06 / Built in Astana', '06 / Сделано в Астане')}</p>
-        <h2 id="hm-earth" className="eg-display hm-h2 hm-h2-xl" data-reveal><Words>{L(lang, <>Earth,<br />before elsewhere</>, <>Сначала Земля.<br />Затем космос</>)}</Words></h2>
+        <h2 id="hm-earth" className="eg-display hm-h2 hm-h2-xl" data-reveal><Words>{L(lang, <>Earth first.<br />Then everything else.</>, <>Сначала Земля.<br />Потом — всё остальное.</>)}</Words></h2>
         <div className="hm-actions" data-reveal>
           <button className="eg-button" onClick={() => open('campaign')}>{L(lang, 'Design a campaign', 'Создать кампанию')}<ArrowRight size={16} strokeWidth={1.6} /></button>
         </div>
@@ -426,7 +426,7 @@ export function HomePage() {
     <section className="hm-index hm-wrap" aria-labelledby="hm-index">
       <div className="hm-index-head">
         <p className="eg-eyebrow" data-reveal>{L(lang, '07 / Workspaces', '07 / Разделы')}</p>
-        <h2 id="hm-index" className="eg-display hm-h2" data-reveal><Words>{L(lang, 'The instrument', 'Инструмент')}</Words></h2>
+        <h2 id="hm-index" className="eg-display hm-h2" data-reveal><Words>{L(lang, 'Everything a mission needs.', 'Всё, что нужно миссии.')}</Words></h2>
       </div>
       <ul className="hm-index-list">
         {tools.map((tool, i) => <li key={tool.route} data-reveal>
@@ -444,7 +444,6 @@ export function HomePage() {
       {/* the mark at the scale of a landscape: the sun setting behind the horizon */}
       <div className="hm-foot-scene" aria-hidden="true">
         <span className="hm-foot-sun" />
-        <span className="hm-foot-orbit" />
       </div>
       <div className="hm-foot-line hm-wrap">
         <span className="hm-foot-word eg-display">Egiz</span>

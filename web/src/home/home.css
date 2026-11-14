@@ -306,9 +306,6 @@
   transform: translate(-50%, calc(28% + var(--set) * 34%));
   background: radial-gradient(circle at 50% 30%, #e9c398 0%, #c98a52 30%, #7b4220 58%, #2a140a 82%, rgba(42, 20, 10, 0) 100%);
   box-shadow: 0 -20px 90px 10px rgba(201, 138, 82, .1); }
-.hm-foot-orbit { position: absolute; left: 50%; bottom: 0; width: clamp(420px, 72vw, 1040px); aspect-ratio: 1; border-radius: 50%; border: 1px solid rgba(240, 236, 228, .14);
-  transform: translate(-50%, 50%) rotate(calc(var(--set) * 24deg)); clip-path: inset(0 0 50% 0); }
-.hm-foot-orbit::after { content: ''; position: absolute; left: 50%; top: -3px; width: 6px; height: 6px; margin-left: -3px; border-radius: 50%; background: var(--paper); box-shadow: 0 0 10px rgba(240, 236, 228, .8); }
 /* the horizon line itself, and what stands on it */
 .hm-foot-line { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 24px; padding-top: 18px; padding-bottom: 18px; border-top: 1px solid rgba(240, 236, 228, .5); background: #000; }
 .hm-foot-word { font-size: 22px; letter-spacing: .34em; text-transform: uppercase; }
