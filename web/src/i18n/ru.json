@@ -2040,5 +2040,16 @@
   "Field checks that would confirm or reject the analogy": "Полевые проверки, которые подтвердят или опровергнут аналогию",
   "Open full dossier": "Открыть полное досье",
   "Test it in Mission Lab": "Проверить в Mission Lab",
-  "The Kazakhstan refinement has not been built: python -m pipeline.discovery refine-plan / refine-acquire / refine-index / refine-build.": "Уточнение по Казахстану не собрано: python -m pipeline.discovery refine-plan / refine-acquire / refine-index / refine-build."
+  "The Kazakhstan refinement has not been built: python -m pipeline.discovery refine-plan / refine-acquire / refine-index / refine-build.": "Уточнение по Казахстану не собрано: python -m pipeline.discovery refine-plan / refine-acquire / refine-index / refine-build.",
+  "Lunar World": "Лунный мир",
+  "Home": "Главная",
+  "NASA data": "Данные NASA",
+  "Space agency partner data (ESA)": "Данные партнёрских космических агентств (ESA)",
+  "LOLA 5 m/px DEMs of the lunar south pole (NASA GSFC Planetary Geodesy Data Archive, PGDA)": "ЦМР LOLA 5 м/пикс южного полюса Луны (NASA GSFC, архив PGDA)",
+  "MOLA (NASA Mars Global Surveyor), inside the USGS HRSC/MOLA blended Mars DEM (200 m)": "MOLA (NASA Mars Global Surveyor) в составе объединённой ЦМР Марса USGS HRSC/MOLA (200 м)",
+  "NASA POWER climatology 2001–2025 (2 m air temperature, precipitation)": "Климатология NASA POWER 2001–2025 (температура воздуха на 2 м, осадки)",
+  "HiRISE (NASA MRO) Jezero terrain via USGS, used for the Mission Studio world": "Рельеф Езеро HiRISE (NASA MRO) через USGS — мир Mission Studio",
+  "SPICE kernels from NASA NAIF (Sun and Earth geometry, lighting)": "Ядра SPICE NASA NAIF (геометрия Солнца и Земли, освещение)",
+  "Copernicus DEM GLO-30 (ESA / Copernicus programme) — Earth terrain": "Copernicus DEM GLO-30 (ESA / программа Copernicus) — рельеф Земли",
+  "ESA WorldCover 2021 v200 — Earth land cover": "ESA WorldCover 2021 v200 — покров Земли"
 }
