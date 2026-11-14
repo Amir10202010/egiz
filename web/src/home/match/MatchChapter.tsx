@@ -63,7 +63,7 @@ function FilmReel({ films, lang }: { films: CinemaAsset[]; lang: Lang }) {
     {film.sources.length
       ? <video ref={vid} key={film.id} muted playsInline preload="metadata" poster={film.still ?? undefined} style={{ objectPosition: film.focus }} onEnded={() => setI(n => Math.min(n + 1, films.length - 1))}>{film.sources.map(s => <source key={s.src} src={s.src} type={s.type} />)}</video>
       : <img src={film.still!} alt="" style={{ objectPosition: film.focus }} />}
-    <span className="mt-film-credit">{film.id} · {L(lang, 'illustrative film', 'иллюстративный кадр')}</span>
+    <span className="mt-film-credit">{film.id} · {L(lang, 'AI-generated (Veo) — illustration, not data', 'создано ИИ (Veo) — иллюстрация, не данные')}</span>
   </div>;
 }
 

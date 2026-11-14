@@ -72,7 +72,7 @@ export const CinemaLayer = forwardRef<CinemaHandle, { lang: Lang; onAssets?: (a:
             {a.sources.map(s => <source key={s.src} src={s.src} type={s.type} />)}
           </video>
         : a.still && <img src={a.still} alt="" className="cn-still" style={{ objectPosition: a.focus }} loading={a.window[0] <= 0 ? 'eager' : 'lazy'} decoding="async" />}
-      <span className="cn-credit">{a.id} · {lang === 'ru' ? 'иллюстративный кадр' : 'illustrative film'}</span>
+      <span className="cn-credit">{a.id} · {lang === 'ru' ? 'создано ИИ (Veo) — иллюстрация, не данные' : 'AI-generated (Veo) — illustration, not data'}</span>
     </div>)}
   </div>;
 });
