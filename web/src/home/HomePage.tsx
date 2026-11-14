@@ -243,15 +243,22 @@ export function HomePage() {
     { route: 'brief', title: 'Mission Brief', ru: 'Задание миссии', text: 'The mission, its objectives and the conditions each one demands.', textRu: 'Миссия, её цели и условия, которых требует каждая из них.' },
   ];
   const exp = EXPEDITIONS.find(e => e.mode === mode)!;
+  // Resolution labels come from the grids actually loaded: the 10 m lunar / HiRISE Mars insets exist only
+  // when their tiles load; otherwise the stage shows the 200 m regional grid (the grid Mission Lab uses).
+  const regionalM = stage ? Math.round(stage.cell) : 200;
+  const moonPost = stage?.hiMoon ? Math.round(stage.hiMoon.size / (stage.hiMoon.side - 1)) : regionalM;
+  const km = (m: number) => (Math.round(m / 100) / 10).toString();
+  const moonInset = stage?.hiMoon ? `${km(stage.hiMoon.size)} × ${km(stage.hiMoon.size)} ${L(lang, 'km', 'км')}` : null;
+  const marsInset = stage?.hiMars ? `${km(stage.hiMars.size)} × ${km(stage.hiMars.size)} ${L(lang, 'km', 'км')}` : null;
   const labelText: string[] = [
     `${L(lang, 'Mons Mouton plateau', 'Плато Монс-Мутон')} · ${stage ? fmt(stage.worlds.moon.center) : '—'} m`,
-    L(lang, 'Measured by laser altimeter · 10 m', 'Измерено лазерным альтиметром · 10 м'),
+    `${L(lang, 'Measured by laser altimeter', 'Измерено лазерным альтиметром')} · ${moonPost} ${L(lang, 'm', 'м')}`,
     `${moonAnalogue} · ${stage ? fmt(stage.worlds.earthMoon.center) : '—'} m`,
     `${L(lang, 'Black Mountains crest', 'Гребень Блэк-Маунтинс')} · ${stage ? fmt(stage.worlds.earthMoon.max) : '—'} m`,
-    L(lang, 'Measured ground · 4 × 4 km', 'Измеренный участок · 4 × 4 км'),
+    moonInset ? `${L(lang, 'Measured ground', 'Измеренный участок')} · ${moonInset}` : `${L(lang, 'Regional grid', 'Региональная сетка')} · ${regionalM} ${L(lang, 'm', 'м')}`,
     L(lang, 'Summit plateau', 'Вершинное плато'),
     L(lang, 'Perseverance landing site', 'Место посадки Perseverance'),
-    L(lang, 'Measured ground · 2 × 2 km', 'Измеренный участок · 2 × 2 км'),
+    marsInset ? `${L(lang, 'Measured ground', 'Измеренный участок')} · ${marsInset}` : `${L(lang, 'Regional grid', 'Региональная сетка')} · ${regionalM} ${L(lang, 'm', 'м')}`,
     L(lang, 'Jezero crater, western rim', 'Кратер Езеро, западный вал'),
     `${marsAnalogue} · ${marsFirst ? pct(marsFirst.coverage) : '—'}%`,
   ];
@@ -336,8 +343,8 @@ export function HomePage() {
           <p className="wd-kicker">{L(lang, '02 · The Moon', '02 · Луна')}</p>
           <h2 id="hm-moon" className="wd-h2">Mons Mouton</h2>
           <p className="wd-body">{L(lang,
-            'A flat-topped mountain near the lunar south pole, among the regions considered for Artemis landings. Inside the marked square every ridge is measured, ten metres apart. Here the Sun crawls along the horizon and shadows stretch for kilometres.',
-            'Гора с плоской вершиной у южного полюса Луны — один из районов, рассматриваемых для посадок Artemis. Внутри отмеченного квадрата измерен каждый гребень, с шагом десять метров. Здесь Солнце ползёт вдоль горизонта, а тени тянутся на километры.')}</p>
+            'A flat-topped mountain near the lunar south pole, among the regions considered for Artemis landings. Inside the marked square the laser-altimeter terrain is shown at ten-metre spacing (the surrounding region and Mission Lab use a 200 m grid). Here the Sun crawls along the horizon and shadows stretch for kilometres.',
+            'Гора с плоской вершиной у южного полюса Луны — один из районов, рассматриваемых для посадок Artemis. Внутри отмеченного квадрата рельеф лазерного альтиметра показан с шагом десять метров (окружающий район и Mission Lab используют сетку 200 м). Здесь Солнце ползёт вдоль горизонта, а тени тянутся на километры.')}</p>
           <dl className="wd-specs">
             <Spec label={L(lang, 'Position', 'Координаты')}>{latLon(lang, moon.lat, moon.lon)}</Spec>
             <Spec label={L(lang, 'Terrain', 'Рельеф')}>{moon.dem_product}</Spec>

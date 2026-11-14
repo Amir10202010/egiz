@@ -1996,5 +1996,13 @@
   "Weak match.": "Слабое совпадение.",
   "this is the nearest Earth window found, not a demonstrated analog.": "это ближайшее найденное окно на Земле, а не доказанный аналог.",
   "AUC against the designated controls (forest, farmland, delta) is an easy test. The hard negative control (bare, arid, latitude-matched windows) is the more informative comparison.": "AUC против назначенных контролей (лес, пашня, дельта) — лёгкий тест. Жёсткий отрицательный контроль (голые аридные окна на тех же широтах) информативнее.",
-  "recall@50 and precision@50 are low or zero for most targets: known analog sites rarely appear in the Earth-wide top 50, so a high AUC means 'ranked above typical land', not 'found the known analogs first'.": "recall@50 и precision@50 низки или равны нулю для большинства целей: известные аналоги редко попадают в мировой топ-50, поэтому высокий AUC означает «выше типичной суши», а не «известные аналоги найдены первыми»."
+  "recall@50 and precision@50 are low or zero for most targets: known analog sites rarely appear in the Earth-wide top 50, so a high AUC means 'ranked above typical land', not 'found the known analogs first'.": "recall@50 и precision@50 низки или равны нулю для большинства целей: известные аналоги редко попадают в мировой топ-50, поэтому высокий AUC означает «выше типичной суши», а не «известные аналоги найдены первыми».",
+  "Cumulative energy used up to the current replay time (Wh), not the mission total and not a certified battery prediction.": "Энергия, израсходованная к текущему моменту воспроизведения (Вт·ч), — не итог миссии и не сертифицированный прогноз работы батареи.",
+  "Energy so far": "Энергия к этому моменту",
+  "mostly vegetated": "в основном растительность",
+  "little bare ground": "мало открытого грунта",
+  "bare ground": "открытый грунт",
+  "bare": "открытого грунта",
+  "Exposure & relief (geology proxy)": "Обнажённость и рельеф (косвенно о геологии)",
+  "EVA terrain: exposure & relief (geology proxy)": "Рельеф для ВКД: обнажённость и рельеф (косвенно о геологии)"
 }
