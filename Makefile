@@ -6,7 +6,7 @@ EARTH_COUNT_PER_STRATUM ?= 1000
 EARTH_OUT_DIR ?= data/processed
 EARTH_ARGS ?=
 
-.PHONY: setup fixtures data earth test check web dev offline serve clean atlas atlas-verify atlas-discover atlas-check world world-verify world-check ml-validate-data ml-infer ml-test ml-example ml-infer-geo
+.PHONY: setup fixtures data earth test check web dev offline serve clean atlas atlas-verify atlas-discover atlas-check world world-verify world-check ml-validate-data ml-infer ml-test ml-example ml-infer-geo world-scene
 
 setup:
 	python3 -m venv .venv
@@ -144,3 +144,9 @@ GEO_RELEASE ?= data/geo/geo-0.1.0
 
 ml-infer-geo:
 	$(PYTHON) -m pipeline.ml infer --geo $(GEO_RELEASE) --data data/pilot --out artifacts/ml/discovery-geo
+
+# Measured egiz.world_scene package for Mission Studio (ASTRAL Jezero). Needs network on first run and SPICE kernels for illumination.
+world-scene:
+	$(PYTHON) -m pipeline.world.scene mars-jezero
+	$(PYTHON) -m pipeline.world.illumination mars-jezero --days 3
+	node web/scripts/copy-world.mjs

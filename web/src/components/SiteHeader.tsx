@@ -6,7 +6,7 @@ import { DataModePicker } from './DataModePicker';
 import { DataNotes } from './DataNotes';
 import copy from '../content/copy.json';
 
-const links: Route[] = ['studio', 'lab', 'campaign', 'atlas', 'twin', 'matrix', 'evidence', 'brief'];
+const links: Route[] = ['astral', 'studio', 'lab', 'campaign', 'atlas', 'twin', 'matrix', 'evidence', 'brief'];
 
 /** EGIZ mark: a horizon line under a partial orbit — Earth, before elsewhere. */
 export function EgizMark() {
