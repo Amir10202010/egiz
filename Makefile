@@ -6,7 +6,7 @@ EARTH_COUNT_PER_STRATUM ?= 1000
 EARTH_OUT_DIR ?= data/processed
 EARTH_ARGS ?=
 
-.PHONY: setup fixtures data earth test check web dev offline serve clean
+.PHONY: setup fixtures data earth test check web dev offline serve clean world
 
 setup:
 	python3 -m venv .venv
@@ -77,3 +77,9 @@ dynamics-check:
 terrain-build:
 	$(PYTHON) -m pipeline.common.terrain_pyramid
 	node web/scripts/copy-data.mjs
+
+# Measured world package for Mission Studio (EGIZ ASTRAL). Needs network on first run and SPICE kernels for illumination.
+world:
+	$(PYTHON) -m pipeline.world.build mars-jezero
+	$(PYTHON) -m pipeline.world.illumination mars-jezero --days 3
+	node web/scripts/copy-world.mjs
