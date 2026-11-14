@@ -298,3 +298,47 @@
   .hm-veo { bottom: auto; top: 18px; }
 }
 @media (prefers-reduced-motion: reduce) { .hm-hero-plate video { animation: none; } }
+
+/* ---------- footer: the sun sets behind the horizon ---------- */
+.hm-footer { --set: 0; position: relative; padding: 0 0 36px; border-top: 0; overflow: hidden; }
+.hm-foot-scene { position: relative; height: clamp(200px, 30vw, 420px); overflow: hidden; }   /* cut at the horizon: the sun sets behind the line */
+.hm-foot-sun { position: absolute; left: 50%; bottom: 0; width: clamp(220px, 30vw, 460px); aspect-ratio: 1; border-radius: 50%;
+  transform: translate(-50%, calc(28% + var(--set) * 34%));
+  background: radial-gradient(circle at 50% 30%, #e9c398 0%, #c98a52 30%, #7b4220 58%, #2a140a 82%, rgba(42, 20, 10, 0) 100%);
+  box-shadow: 0 -20px 90px 10px rgba(201, 138, 82, .1); }
+.hm-foot-orbit { position: absolute; left: 50%; bottom: 0; width: clamp(420px, 72vw, 1040px); aspect-ratio: 1; border-radius: 50%; border: 1px solid rgba(240, 236, 228, .14);
+  transform: translate(-50%, 50%) rotate(calc(var(--set) * 24deg)); clip-path: inset(0 0 50% 0); }
+.hm-foot-orbit::after { content: ''; position: absolute; left: 50%; top: -3px; width: 6px; height: 6px; margin-left: -3px; border-radius: 50%; background: var(--paper); box-shadow: 0 0 10px rgba(240, 236, 228, .8); }
+/* the horizon line itself, and what stands on it */
+.hm-foot-line { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 24px; padding-top: 18px; padding-bottom: 18px; border-top: 1px solid rgba(240, 236, 228, .5); background: #000; }
+.hm-foot-word { font-size: 22px; letter-spacing: .34em; text-transform: uppercase; }
+.hm-foot-top { display: inline-flex; align-items: center; gap: 10px; background: none; border: 0; color: var(--paper-2); cursor: pointer; font-family: var(--font-mono); font-size: 11px; letter-spacing: .16em; text-transform: uppercase; transition: color .3s; }
+.hm-foot-top span { display: inline-block; transition: transform .5s var(--ease-out); }
+.hm-foot-top:hover { color: var(--paper); }
+.hm-foot-top:hover span { transform: translateY(-4px); }
+.hm-foot-fine { display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px 28px; padding-top: 18px; border-top: 1px solid var(--rule); font-size: 12px; line-height: 1.55; color: var(--paper-3); }
+.hm-foot-fine > span:first-child { font-family: var(--font-mono); font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--paper-2); }
+.hm-foot-fine > span { max-width: 460px; }
+.hm-foot-fine .eg-button { margin-left: auto; min-height: 0; font-size: 12px; color: var(--paper-2); }
+@media (max-width: 700px) { .hm-foot-fine .eg-button { margin-left: 0; } }
+
+/* ---------- spatial scroll ---------- */
+/* pinned film: the frame follows the scroll; the camera eases in; words pass over it */
+.hm-plate-scrub { display: block; height: 230svh; overflow: visible; min-height: 0; }
+.hm-plate-scrub::before, .hm-plate-scrub::after { display: none; }
+.hm-plate-scrub .hm-plate-media { position: sticky; top: 0; height: 100svh; inset: auto; overflow: hidden; z-index: 0; }
+.hm-plate-scrub .hm-plate-media video, .hm-plate-scrub .hm-plate-media img { inset: 0; height: 100%; transform: scale(calc(1.1 - var(--p, 0) * .1)); will-change: transform; }
+.hm-plate-scrub .hm-plate-media::after { content: ''; position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(90deg, rgba(0,0,0,.78) 0%, rgba(0,0,0,.3) 44%, rgba(0,0,0,0) 66%), linear-gradient(180deg, #000 0%, rgba(0,0,0,0) 16%, rgba(0,0,0,0) 72%, #000 100%); }
+.hm-plate-scrub .hm-plate-copy { position: relative; z-index: 1; margin-top: -62svh; padding-top: 0; padding-bottom: 30svh; }
+.hm-plate-scrub .hm-plate-copy-top { margin-top: -78svh; }
+.hm-plate-scrub .hm-veo { position: sticky; display: block; width: max-content; margin: -40px var(--gutter) 0 auto; bottom: 22px; }
+/* content blocks swing into place in 3D, then lean back as they leave */
+.hm.is-spatial [data-spatial] { --sp: 0; --sx: 0; transform-origin: 50% 0%; will-change: transform, opacity;
+  transform: perspective(1600px) translate3d(0, calc((1 - var(--sp)) * 90px), calc((1 - var(--sp)) * -120px)) rotateX(calc((1 - var(--sp)) * 22deg - var(--sx) * 9deg)) scale(calc(.94 + var(--sp) * .06 - var(--sx) * .04));
+  opacity: calc(.12 + var(--sp) * .88 - var(--sx) * .55); }
+@media (max-width: 700px) {
+  .hm-plate-scrub { height: 210svh; }
+  .hm-plate-scrub .hm-plate-media::after { background: linear-gradient(0deg, rgba(0,0,0,.92) 0%, rgba(0,0,0,.5) 45%, rgba(0,0,0,.05) 75%), linear-gradient(180deg, #000 0%, rgba(0,0,0,0) 14%); }
+  .hm-plate-scrub .hm-plate-copy { margin-top: -58svh; padding-bottom: 36svh; }
+}

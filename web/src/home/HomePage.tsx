@@ -49,24 +49,29 @@ type Lang = 'en' | 'ru';
 const L = <T,>(lang: Lang, en: T, ru: T) => (lang === 'ru' ? ru : en);
 const asset = (path: string) => `${import.meta.env.BASE_URL}${path}`;
 
-/** Phones get the 720p rendition, larger screens 1080p. */
-const CLIP_RES = typeof window !== 'undefined' && Math.max(window.innerWidth, window.innerHeight) * Math.min(window.devicePixelRatio || 1, 2) < 1500 ? 720 : 1080;
+/** Pick the rendition by the screen's real pixels: phones 720p, laptops 1080p, large or dense screens 1440p. */
+const CLIP_RES = (() => {
+  if (typeof window === 'undefined') return 1080;
+  const px = Math.max(window.innerWidth, window.innerHeight) * Math.min(window.devicePixelRatio || 1, 2);
+  return px < 1000 ? 720 : px < 1800 ? 1080 : 1440;
+})();
 /** A generated film clip in place of a still: plays when it is on screen, holds its last frame, replays on return.
  *  Visitors who asked for less motion get the last frame as a still. */
-function Clip({ base, active = true, parallax, eager }: { base: string; active?: boolean; parallax?: string; eager?: boolean }) {
+function Clip({ base, active = true, parallax, eager, scrub }: { base: string; active?: boolean; parallax?: string; eager?: boolean; scrub?: boolean }) {
   const ref = useRef<HTMLVideoElement>(null);
   const reduced = typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
   useEffect(() => {
-    const v = ref.current; if (!v || reduced) return;
+    const v = ref.current; if (!v || reduced || scrub) return;
     if (!active) { v.pause(); return; }
     if (typeof IntersectionObserver === 'undefined') { v.play().catch(() => {}); return; }
     const io = new IntersectionObserver(([e]) => {
       if (e.isIntersecting && e.intersectionRatio > .3) { if (v.ended) v.currentTime = 0; v.play().catch(() => {}); } else v.pause();
     }, { threshold: [0, .3] });
     io.observe(v); return () => io.disconnect();
-  }, [active, reduced]);
+  }, [active, reduced, scrub]);
   if (reduced) return <img data-parallax={parallax} src={asset(`${base}-end.jpg`)} alt="" decoding="async" />;
-  return <video ref={ref} data-parallax={parallax} muted playsInline preload={eager ? 'auto' : 'metadata'} poster={asset(`${base}.jpg`)} src={asset(`${base}-${CLIP_RES}.mp4`)} />;
+  // scrubbed clips are driven by the scroll (useSpatial); the rest play while visible
+  return <video ref={ref} data-parallax={scrub ? undefined : parallax} data-scrub={scrub ? '' : undefined} muted playsInline preload={eager ? 'auto' : 'metadata'} poster={asset(`${base}.jpg`)} src={asset(`${base}-${CLIP_RES}.mp4`)} />;
 }
 
 function coord(value: number, pos: string, neg: string) { return `${Math.abs(value).toFixed(2)}°${value >= 0 ? pos : neg}`; }
@@ -121,6 +126,41 @@ function bestCampaign(run: Run | undefined) {
   return run.campaigns.reduce((a, b) => (b.k > a.k ? b : a));
 }
 
+/** Spatial scroll: pinned film plates follow the scroll frame by frame, and content blocks swing
+ *  into place in 3D as they arrive and lean back as they leave. Off for reduced motion. */
+function useSpatial(root: React.RefObject<HTMLElement | null>) {
+  useEffect(() => {
+    const host = root.current; if (!host || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
+    const clamp = (v: number) => Math.min(1, Math.max(0, v));
+    const smoothed = new WeakMap<HTMLVideoElement, number>();
+    let raf = 0, last = performance.now();
+    const frame = (now: number) => {
+      raf = requestAnimationFrame(frame);
+      const dt = Math.min(.05, (now - last) / 1000); last = now; const vh = window.innerHeight;
+      host.querySelectorAll<HTMLElement>('[data-spatial]').forEach(el => {
+        const r = el.getBoundingClientRect(); if (r.top > vh * 1.2 || r.bottom < -vh * .2) return;
+        el.style.setProperty('--sp', clamp((vh - r.top) / (vh * .72)).toFixed(3));
+        el.style.setProperty('--sx', clamp((vh * .3 - r.bottom) / (vh * .3)).toFixed(3));
+      });
+      host.querySelectorAll<HTMLElement>('.hm-plate-scrub').forEach(sec => {
+        const r = sec.getBoundingClientRect(); const v = sec.querySelector<HTMLVideoElement>('video[data-scrub]');
+        if (r.top > vh * 1.5 || r.bottom < -vh * .5) return;
+        if (v && v.preload !== 'auto') { v.preload = 'auto'; v.load(); }
+        const p = clamp(-r.top / Math.max(1, r.height - vh)); sec.style.setProperty('--p', p.toFixed(4));
+        if (!v || v.readyState < 1 || !v.duration) return;
+        const prev = smoothed.get(v) ?? p; const sp = prev + (p - prev) * (1 - Math.exp(-dt * 9)); smoothed.set(v, sp);
+        if (!v.paused) v.pause();
+        const t = sp * (v.duration - .05); if (Math.abs(v.currentTime - t) > 1 / 48) v.currentTime = t;
+      });
+      const foot = host.querySelector<HTMLElement>('[data-spatial-footer]');
+      if (foot) { const r = foot.getBoundingClientRect(); foot.style.setProperty('--set', clamp((vh - r.top) / (r.height + vh * .2)).toFixed(3)); }
+    };
+    host.classList.add('is-spatial');
+    raf = requestAnimationFrame(frame);
+    return () => { cancelAnimationFrame(raf); host.classList.remove('is-spatial'); };
+  }, [root]);
+}
+
 export function HomePage() {
   const lang = useLanguage(s => s.language) as Lang;
   const { data, navigate, setTarget } = useAppStore();
@@ -129,7 +169,7 @@ export function HomePage() {
   const [mode, setMode] = useState<Mode>('rover');
   const [params, setParams] = useState<Record<string, number>>(() => defaultsFor('rover'));
   const chooseMode = (next: Mode) => { setMode(next); setParams(defaultsFor(next)); };
-  useReveal(root); useParallax(root);
+  useReveal(root); useParallax(root); useSpatial(root);
   if (!data) return null;
 
   const moon = data.targets.targets.find(t => t.body === 'moon' && t.kind !== 'validation_only') ?? data.targets.targets.find(t => t.body === 'moon');
@@ -223,7 +263,7 @@ export function HomePage() {
     </section>
 
     {/* 02 — Thesis */}
-    <section id="hm-thesis" className="hm-thesis hm-wrap">
+    <section id="hm-thesis" className="hm-thesis hm-wrap" data-spatial>
       <p className="eg-eyebrow" data-reveal>{L(lang, '01 / The problem', '01 / Задача')}</p>
       <h2 className="hm-statement" data-reveal>{L(lang,
         'Every crew that leaves Earth trains on it first. The hard question is where — and what that rehearsal can never prove.',
@@ -240,9 +280,9 @@ export function HomePage() {
     </section>
 
     {/* Film — the stand-in: the same light on another world */}
-    <section className="hm-plate hm-plate-film" aria-labelledby="hm-twin">
-      <div className="hm-plate-media" aria-hidden="true"><Clip base="media/cinematic/earth/s2-twin" parallax="60" /></div>
-      <div className="hm-plate-copy hm-wrap">
+    <section className="hm-plate hm-plate-film hm-plate-scrub" aria-labelledby="hm-twin">
+      <div className="hm-plate-media" aria-hidden="true"><Clip base="media/cinematic/earth/s2-twin" scrub /></div>
+      <div className="hm-plate-copy hm-wrap" data-spatial>
         <p className="eg-eyebrow" data-reveal>{L(lang, 'The stand-in', 'Двойник')}</p>
         <h2 id="hm-twin" className="eg-display hm-h2" data-reveal>{L(lang, 'Same light. Another world.', 'Тот же свет. Другой мир.')}</h2>
         <p className="hm-body" data-reveal>{L(lang, 'The lunar plain turns into a desert salt pan. Crews rehearse here before they ever leave Earth.', 'Лунная равнина превращается в солончак пустыни. Здесь экипажи репетируют, прежде чем покинуть Землю.')}</p>
@@ -251,7 +291,7 @@ export function HomePage() {
     </section>
 
     {/* 03 — Moon target, measured */}
-    {moon && <section className="hm-target hm-wrap" aria-labelledby="hm-moon">
+    {moon && <section className="hm-target hm-wrap" aria-labelledby="hm-moon" data-spatial>
       <figure className="hm-target-figure" data-reveal>
         <div className="hm-target-image">
           <img src={asset('hero/mons-mouton-hillshade-1600.jpg')} srcSet={`${asset('hero/mons-mouton-hillshade-800.jpg')} 800w, ${asset('hero/mons-mouton-hillshade-1600.jpg')} 1600w`} sizes="(max-width: 900px) 100vw, 50vw" width={1600} height={1600} alt={L(lang, 'Hillshade of the measured Mons Mouton terrain, 4 by 4 kilometres, lit by a low sun.', 'Теневая отмывка измеренного рельефа Монс-Мутон, 4 на 4 километра, при низком Солнце.')} loading="lazy" decoding="async" />
@@ -277,11 +317,11 @@ export function HomePage() {
     </section>}
 
     {/* 04 — Mars target, full bleed */}
-    {mars && <section className="hm-plate hm-plate-mars" aria-labelledby="hm-mars">
+    {mars && <section className="hm-plate hm-plate-mars hm-plate-scrub" aria-labelledby="hm-mars">
       <div className="hm-plate-media" aria-hidden="true">
-        <Clip base="media/cinematic/transitions/s4-passage" parallax="90" />
+        <Clip base="media/cinematic/transitions/s4-passage" scrub />
       </div>
-      <div className="hm-plate-copy hm-wrap">
+      <div className="hm-plate-copy hm-wrap" data-spatial>
         <p className="eg-eyebrow" data-reveal>{L(lang, '03 / Destination — Mars', '03 / Цель — Марс')}</p>
         <h2 id="hm-mars" className="eg-display hm-h2 hm-h2-xl" data-reveal>{L(lang, 'Jezero', 'Езеро')}</h2>
         <p className="hm-body" data-reveal>{L(lang,
@@ -297,9 +337,9 @@ export function HomePage() {
     </section>}
 
     {/* Film — Mars becomes its Earth twin */}
-    {mars && <section className="hm-plate hm-plate-film" aria-labelledby="hm-mars-twin">
-      <div className="hm-plate-media" aria-hidden="true"><Clip base="media/cinematic/missions/s6-answer" parallax="60" /></div>
-      <div className="hm-plate-copy hm-wrap">
+    {mars && <section className="hm-plate hm-plate-film hm-plate-scrub" aria-labelledby="hm-mars-twin">
+      <div className="hm-plate-media" aria-hidden="true"><Clip base="media/cinematic/missions/s6-answer" scrub /></div>
+      <div className="hm-plate-copy hm-wrap" data-spatial>
         <p className="eg-eyebrow" data-reveal>{L(lang, 'The twin of Mars', 'Двойник Марса')}</p>
         <h2 id="hm-mars-twin" className="eg-display hm-h2" data-reveal>{L(lang, 'Mars has one too.', 'У Марса он тоже есть.')}</h2>
         {marsTwinName && <p className="hm-body" data-reveal>{L(lang, `The closest ground to Jezero on Earth: ${marsTwinName}.`, `Самый близкий к Езеро грунт на Земле — ${marsTwinName}.`)}</p>}
@@ -308,7 +348,7 @@ export function HomePage() {
     </section>}
 
     {/* 05 — Method & the live result */}
-    <section className="hm-method hm-wrap" aria-labelledby="hm-method">
+    <section className="hm-method hm-wrap" aria-labelledby="hm-method" data-spatial>
       <div className="hm-method-head">
         <p className="eg-eyebrow" data-reveal>{L(lang, '04 / Method', '04 / Метод')}</p>
         <h2 id="hm-method" className="eg-display hm-h2" data-reveal>{L(lang, 'Constrain. Compute. Confess.', 'Ограничить. Рассчитать. Признать.')}</h2>
@@ -332,7 +372,7 @@ export function HomePage() {
     </section>
 
     {/* 06 — What Earth cannot test */}
-    {gapRows.length > 0 && <section className="hm-gaps hm-wrap" aria-labelledby="hm-gaps">
+    {gapRows.length > 0 && <section className="hm-gaps hm-wrap" aria-labelledby="hm-gaps" data-spatial>
       <div className="hm-gaps-head">
         <p className="eg-eyebrow" data-reveal>{L(lang, '05 / Gap ledger', '05 / Реестр пробелов')}</p>
         <h2 id="hm-gaps" className="eg-display hm-h2" data-reveal>{L(lang, 'What Earth cannot test', 'Что Земля не может проверить')}</h2>
@@ -348,11 +388,11 @@ export function HomePage() {
     </section>}
 
     {/* 07 — Earth */}
-    <section className="hm-plate hm-plate-earth" aria-labelledby="hm-earth">
+    <section className="hm-plate hm-plate-earth hm-plate-scrub" aria-labelledby="hm-earth">
       <div className="hm-plate-media" aria-hidden="true">
-        <Clip base="media/cinematic/orbital/s7-home" parallax="-70" />
+        <Clip base="media/cinematic/orbital/s7-home" scrub />
       </div>
-      <div className="hm-plate-copy hm-plate-copy-top hm-wrap">
+      <div className="hm-plate-copy hm-plate-copy-top hm-wrap" data-spatial>
         <p className="eg-eyebrow" data-reveal>{L(lang, '06 / Built in Astana', '06 / Сделано в Астане')}</p>
         <h2 id="hm-earth" className="eg-display hm-h2 hm-h2-xl" data-reveal>{L(lang, <>Earth,<br />before elsewhere</>, <>Сначала Земля.<br />Затем космос</>)}</h2>
         <div className="hm-actions" data-reveal>
@@ -362,7 +402,7 @@ export function HomePage() {
     </section>
 
     {/* 08 — Index of workspaces */}
-    <section className="hm-index hm-wrap" aria-labelledby="hm-index">
+    <section className="hm-index hm-wrap" aria-labelledby="hm-index" data-spatial>
       <div className="hm-index-head">
         <p className="eg-eyebrow" data-reveal>{L(lang, '07 / Workspaces', '07 / Разделы')}</p>
         <h2 id="hm-index" className="eg-display hm-h2" data-reveal>{L(lang, 'The instrument', 'Инструмент')}</h2>
@@ -379,12 +419,21 @@ export function HomePage() {
       </ul>
     </section>
 
-    <footer className="hm-footer hm-wrap">
-      <div className="hm-footer-mark eg-display" aria-hidden="true">Egiz</div>
-      <div className="hm-footer-cols">
-        <p>{L(lang, 'Independent student project for NASA Space Apps Challenge 2026. Not affiliated with or endorsed by NASA.', 'Независимый студенческий проект для NASA Space Apps Challenge 2026. Не связан с NASA и не одобрен NASA.')}</p>
-        <p>{L(lang, 'Planet plates rendered from Solar System Scope global mosaics (CC BY 4.0) based on NASA imagery; terrain from NASA PGDA. Visual context only — never solver input.', 'Изображения планет построены по глобальным мозаикам Solar System Scope (CC BY 4.0) на основе снимков NASA; рельеф — NASA PGDA. Только визуальный контекст, не входные данные расчёта.')}</p>
-        <p className="hm-footer-meta"><span>© 2026 Egiz</span><button className="eg-button quiet" onClick={() => open('evidence')}><span>{L(lang, 'Sources & limits', 'Источники и ограничения')}</span></button></p>
+    <footer className="hm-footer" data-spatial-footer>
+      {/* the mark at the scale of a landscape: the sun setting behind the horizon */}
+      <div className="hm-foot-scene" aria-hidden="true">
+        <span className="hm-foot-sun" />
+        <span className="hm-foot-orbit" />
+      </div>
+      <div className="hm-foot-line hm-wrap">
+        <span className="hm-foot-word eg-display">Egiz</span>
+        <button className="hm-foot-top" onClick={() => window.scrollTo({ top: 0, behavior: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' })}>{L(lang, 'Back to the Moon', 'Обратно к Луне')}<span aria-hidden="true">↑</span></button>
+      </div>
+      <div className="hm-foot-fine hm-wrap">
+        <span>© 2026 Egiz</span>
+        <span>{L(lang, 'Independent student project for NASA Space Apps Challenge 2026. Not affiliated with or endorsed by NASA.', 'Независимый студенческий проект для NASA Space Apps Challenge 2026. Не связан с NASA и не одобрен NASA.')}</span>
+        <span>{L(lang, 'Films are illustrative, generated with Veo; terrain from NASA PGDA. Visual context only — never solver input.', 'Фильмы — иллюстрация, созданная в Veo; рельеф — NASA PGDA. Только визуальный контекст, не входные данные расчёта.')}</span>
+        <button className="eg-button quiet" onClick={() => open('evidence')}><span>{L(lang, 'Sources & limits', 'Источники и ограничения')}</span></button>
       </div>
     </footer>
   </main>;
