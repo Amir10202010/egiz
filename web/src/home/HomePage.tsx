@@ -226,12 +226,14 @@ export function HomePage() {
   };
 
   const tools: { route: Route; title: string; ru: string; text: string; textRu: string }[] = [
-    { route: 'lab', title: 'Engineering lab', ru: 'Инженерная лаборатория', text: 'Measured terrain, vehicles, transfers and surface operations in one 3D workbench.', textRu: 'Измеренный рельеф, техника, перелёты и работа на поверхности — в одном 3D-стенде.' },
-    { route: 'campaign', title: 'Campaign', ru: 'Кампания', text: 'Choose objectives and compute the smallest set of Earth sites that covers them.', textRu: 'Выберите цели и рассчитайте минимальный набор земных площадок, который их покрывает.' },
-    { route: 'twin', title: 'Same Sun', ru: 'Одно Солнце', text: 'Compare a target and an Earth site under identical solar geometry.', textRu: 'Сравните цель и земную площадку при одинаковой геометрии Солнца.' },
-    { route: 'matrix', title: 'Fidelity matrix', ru: 'Матрица соответствия', text: 'Every objective against every site, with the Earth ceiling stated per cell.', textRu: 'Каждая цель против каждой площадки, с пределом Земли в каждой ячейке.' },
-    { route: 'evidence', title: 'Evidence', ru: 'Источники', text: 'Sources, pre-registered validation and the limits of every dataset.', textRu: 'Источники, заранее зарегистрированная проверка и ограничения каждого набора данных.' },
-    { route: 'brief', title: 'Mission brief', ru: 'Задание миссии', text: 'The mission template, its objectives and the constraints behind them.', textRu: 'Шаблон миссии, его цели и ограничения, на которых они основаны.' },
+    { route: 'discover', title: 'Discover', ru: 'Поиск аналогов', text: 'Search the whole Earth for analogue ground, and ask the assistant in plain words.', textRu: 'Поиск аналогов по всей Земле — и ассистент, которому можно задать вопрос словами.' },
+    { route: 'astral', title: 'Mission Studio', ru: 'Студия миссий', text: 'Measured Jezero ground: terrain units, science targets and a rover you can plan.', textRu: 'Измеренный грунт Езеро: типы рельефа, научные цели и ровер, которым можно управлять.' },
+    { route: 'studio', title: 'Lunar World', ru: 'Lunar World', text: 'One workspace where the measured world, the intelligence layer and the simulator share state.', textRu: 'Одно пространство, где измеренный мир, слой анализа и симулятор работают вместе.' },
+    { route: 'lab', title: 'Engineering lab', ru: 'Инженерная лаборатория', text: 'Drive, launch and land on measured terrain, and read every number the run produces.', textRu: 'Ведите ровер, запускайте и сажайте аппараты на измеренном рельефе — и видьте каждую цифру.' },
+    { route: 'campaign', title: 'Field campaign', ru: 'Полевая кампания', text: 'Choose what the crew must practise. Get the fewest places on Earth that cover it.', textRu: 'Выберите, что нужно отработать, — и получите минимум мест на Земле, где это возможно.' },
+    { route: 'atlas', title: 'Transferability', ru: 'Переносимость', text: 'How much of a rehearsal carries over to the real mission — and what would raise it.', textRu: 'Сколько от репетиции переносится на настоящую миссию — и что это повысит.' },
+    { route: 'evidence', title: 'Sources & limits', ru: 'Источники и пределы', text: 'Where every number comes from, how it will be tested, and what it cannot tell you.', textRu: 'Откуда каждая цифра, как её будут проверять и о чём она умалчивает.' },
+    { route: 'twin', title: 'Same Sun', ru: 'Под одним Солнцем', text: 'A target and its Earth stand-in side by side, under the same sunlight.', textRu: 'Цель и её земной двойник рядом — под одним и тем же Солнцем.' },
   ];
 
   return <main ref={root} className="hm" aria-labelledby="hm-title">
@@ -395,10 +397,27 @@ export function HomePage() {
         `Результаты набора данных «${synthetic ? 'синтетическое демо' : 'пилот на измеренном рельефе'}», движок ${data.results.engine_version}. Предварительно и без валидации — низкое покрытие для Луны и есть вывод, а не ошибка.`)}</p>
     </section>
 
+    {/* 05 — Intelligence */}
+    <section className="hm-method hm-ai hm-wrap" aria-labelledby="hm-ai">
+      <div className="hm-method-head">
+        <p className="eg-eyebrow" data-reveal>{L(lang, '05 / Intelligence', '05 / Интеллект')}</p>
+        <h2 id="hm-ai" className="eg-display hm-h2" data-reveal><Words>{L(lang, 'Ask in words. Get answers from data.', 'Спросите словами. Ответ — из данных.')}</Words></h2>
+      </div>
+      <ol className="hm-steps">
+        <li data-reveal><span className="hm-step-n">01</span><h3>{L(lang, 'An assistant that cannot make numbers up', 'Ассистент, который не выдумывает цифры')}</h3><p>{L(lang, 'Ask Discover a question in plain words. It calls the search tools itself, and every number in the answer comes from those tools — never from the model.', 'Спросите Discover обычными словами. Он сам вызывает инструменты поиска, и каждая цифра в ответе берётся из них — не из модели.')}</p></li>
+        <li data-reveal><span className="hm-step-n">02</span><h3>{L(lang, 'Terrain it reads on its own', 'Рельеф, который он читает сам')}</h3><p>{L(lang, 'In Mission Studio a model with no labelled training data maps terrain units on measured Jezero ground and points to places worth a closer look — as hypotheses, not findings.', 'В Студии миссий модель без размеченных обучающих данных делит измеренный грунт Езеро на типы рельефа и указывает места, на которые стоит посмотреть, — как гипотезы, а не находки.')}</p></li>
+        <li data-reveal><span className="hm-step-n">03</span><h3>{L(lang, 'A ranking you can open up', 'Рейтинг, который можно разобрать')}</h3><p>{L(lang, 'The machine-learning ranking of candidate sites is transparent: each score breaks into its components, with a check of how stable it is.', 'ML-рейтинг площадок прозрачен: каждая оценка раскладывается на составляющие, и проверено, насколько она устойчива.')}</p></li>
+      </ol>
+      <div className="hm-actions" data-reveal>
+        <button className="eg-button" onClick={() => open('discover')}>{L(lang, 'Ask Discover', 'Спросить Discover')}<ArrowRight size={16} strokeWidth={1.6} /></button>
+        <button className="eg-button quiet" onClick={() => open('astral')}><span>{L(lang, 'Open Mission Studio', 'Открыть Студию миссий')}</span></button>
+      </div>
+    </section>
+
     {/* 06 — What Earth cannot test */}
     {gapRows.length > 0 && <section className="hm-gaps hm-wrap" aria-labelledby="hm-gaps">
       <div className="hm-gaps-head">
-        <p className="eg-eyebrow" data-reveal>{L(lang, '05 / Gap ledger', '05 / Реестр пробелов')}</p>
+        <p className="eg-eyebrow" data-reveal>{L(lang, '06 / Gap ledger', '06 / Реестр пробелов')}</p>
         <h2 id="hm-gaps" className="eg-display hm-h2" data-reveal><Words>{L(lang, 'Where Earth runs out.', 'Где Земля заканчивается.')}</Words></h2>
         <p className="hm-body" data-reveal>{L(lang, 'No desert lowers gravity. No glacier is a vacuum. Egiz names every gap — and the facility that closes it.', 'Ни одна пустыня не ослабит гравитацию. Ни один ледник не станет вакуумом. Egiz называет каждый пробел — и установку, которая его закроет.')}</p>
       </div>
@@ -414,7 +433,7 @@ export function HomePage() {
     {/* 07 — Earth */}
     <section className="hm-plate hm-window hm-window-top" aria-labelledby="hm-earth" data-film-anchor>
       <div className="hm-plate-copy hm-wrap">
-        <p className="eg-eyebrow" data-reveal>{L(lang, '06 / Built in Astana', '06 / Сделано в Астане')}</p>
+        <p className="eg-eyebrow" data-reveal>{L(lang, '07 / Built in Astana', '07 / Сделано в Астане')}</p>
         <h2 id="hm-earth" className="eg-display hm-h2 hm-h2-xl" data-reveal><Words>{L(lang, <>Earth first.<br />Then everything else.</>, <>Сначала Земля.<br />Потом — всё остальное.</>)}</Words></h2>
         <div className="hm-actions" data-reveal>
           <button className="eg-button" onClick={() => open('campaign')}>{L(lang, 'Design a campaign', 'Создать кампанию')}<ArrowRight size={16} strokeWidth={1.6} /></button>
@@ -425,7 +444,7 @@ export function HomePage() {
     {/* 08 — Index of workspaces */}
     <section className="hm-index hm-wrap" aria-labelledby="hm-index">
       <div className="hm-index-head">
-        <p className="eg-eyebrow" data-reveal>{L(lang, '07 / Workspaces', '07 / Разделы')}</p>
+        <p className="eg-eyebrow" data-reveal>{L(lang, '08 / Workspaces', '08 / Разделы')}</p>
         <h2 id="hm-index" className="eg-display hm-h2" data-reveal><Words>{L(lang, 'Everything a mission needs.', 'Всё, что нужно миссии.')}</Words></h2>
       </div>
       <ul className="hm-index-list">
@@ -441,10 +460,6 @@ export function HomePage() {
     </section>
 
     <footer className="hm-footer" data-spatial-footer data-film-anchor>
-      {/* the mark at the scale of a landscape: the sun setting behind the horizon */}
-      <div className="hm-foot-scene" aria-hidden="true">
-        <span className="hm-foot-sun" />
-      </div>
       <div className="hm-foot-line hm-wrap">
         <span className="hm-foot-word eg-display">Egiz</span>
         <button className="hm-foot-top" onClick={() => window.scrollTo({ top: 0, behavior: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' })}>{L(lang, 'Back to the Moon', 'Обратно к Луне')}<span aria-hidden="true">↑</span></button>

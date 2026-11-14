@@ -301,11 +301,6 @@
 
 /* ---------- footer: the sun sets behind the horizon ---------- */
 .hm-footer { --set: 0; position: relative; padding: 0 0 36px; border-top: 0; overflow: hidden; }
-.hm-foot-scene { position: relative; height: clamp(200px, 30vw, 420px); overflow: hidden; }   /* cut at the horizon: the sun sets behind the line */
-.hm-foot-sun { position: absolute; left: 50%; bottom: 0; width: clamp(220px, 30vw, 460px); aspect-ratio: 1; border-radius: 50%;
-  transform: translate(-50%, calc(28% + var(--set) * 34%));
-  background: radial-gradient(circle at 50% 30%, #e9c398 0%, #c98a52 30%, #7b4220 58%, #2a140a 82%, rgba(42, 20, 10, 0) 100%);
-  box-shadow: 0 -20px 90px 10px rgba(201, 138, 82, .1); }
 /* the horizon line itself, and what stands on it */
 .hm-foot-line { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 24px; padding-top: 18px; padding-bottom: 18px; border-top: 1px solid rgba(240, 236, 228, .5); background: #000; }
 .hm-foot-word { font-size: 22px; letter-spacing: .34em; text-transform: uppercase; }
@@ -390,3 +385,10 @@ html.lenis, html.lenis body { height: auto; }
 /* the shade under the words fades out at both ends, so a window never meets the next section on a hard line */
 .hm-window::after { -webkit-mask-image: linear-gradient(180deg, transparent 0%, #000 18%, #000 82%, transparent 100%); mask-image: linear-gradient(180deg, transparent 0%, #000 18%, #000 82%, transparent 100%); }
 @media (max-width: 700px) { .hm-window::after { background: rgba(0, 0, 0, .55); } }
+
+/* the hero's shade dissolves into the page instead of ending on a line */
+.hm-hero-shade { -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 72%, transparent 100%); mask-image: linear-gradient(180deg, #000 0%, #000 72%, transparent 100%); }
+/* the footer begins on its horizon line */
+.hm-footer { padding-top: clamp(80px, 12vh, 140px); background: linear-gradient(180deg, rgba(0,0,0,0) 0, #000 clamp(80px, 12vh, 140px)); }
+.hm-ai { padding-top: clamp(80px, 12vh, 160px); }
+.hm-ai .hm-actions { margin-top: clamp(28px, 4vh, 44px); }
