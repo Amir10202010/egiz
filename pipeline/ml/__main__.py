@@ -31,7 +31,20 @@ def main(argv: list[str] | None = None) -> int:
     infer.add_argument("--draws", type=int, help="stability perturbation draws")
     infer.add_argument("--seed", type=int, help="stability seed")
     infer.add_argument("--created-at", help="fixed timestamp for reproducible output")
+    patches = sub.add_parser("patches", help="cut verified 50 m DEM grids into encoder tiles")
+    patches.add_argument("--geo", default="data/geo/geo-0.1.0")
+    patches.add_argument("--grids", required=True, help="directory with <aoi>_p50.tif grids")
+    patches.add_argument("--out", default="artifacts/ml/patches-0.1.0")
+    patches.add_argument("--size", type=int, default=64)
+    patches.add_argument("--stride", type=int, default=64)
     args = parser.parse_args(argv)
+    if args.command == "patches":
+        from .patches import build_patches
+
+        result = build_patches(args.geo, args.grids, args.out, size=args.size, stride=args.stride)
+        print(json.dumps({k: result[k] for k in ("counts", "split", "gate")}, indent=1))
+        print(f"skipped: {len(result['skipped'])}")
+        return 0
     try:
         if args.geo:
             snapshot = load_geo_snapshot(args.geo, args.data, ids=args.ids, limit=args.limit, env_dir=args.env)
