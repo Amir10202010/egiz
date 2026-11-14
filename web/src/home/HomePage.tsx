@@ -2,6 +2,7 @@
 import { Fragment, isValidElement, useEffect, useRef, useState, type ReactNode } from 'react';
 import { ArrowRight, ArrowUpRight } from 'lucide-react';
 import Lenis from 'lenis';
+import { Decode } from './Decode';
 import { t as tr, useLanguage } from '../i18n';
 import { useAppStore, type Route } from '../state/store';
 import type { AppData, Run, Target } from '../types/contracts';
@@ -58,6 +59,45 @@ const CLIP_RES = (() => {
 })();
 /** The seven clips, in flight order: one continuous film behind the whole page. */
 const FILM = ['hero/s1-arrival', 'earth/s2-twin', 'moon/s3-return', 'transitions/s4-passage', 'mars/s5-jezero', 'missions/s6-answer', 'orbital/s7-home'];
+
+type Body = 'moon' | 'earth' | 'mars' | 'transit';
+interface Place { body: Body; en: string; ru: string; lat?: number; lon?: number }
+const MOUTON: Place = { body: 'moon', en: 'Mons Mouton · lunar south pole', ru: 'Монс-Мутон · южный полюс Луны', lat: -85.43, lon: 31.74 };
+const VALLEY: Place = { body: 'earth', en: 'Death Valley · California', ru: 'Долина Смерти · Калифорния', lat: 36.24, lon: -116.82 };
+const RIM: Place = { body: 'moon', en: 'Crater rim · lunar south pole', ru: 'Край кратера · южный полюс Луны', lat: -85.4, lon: 32.7 };
+const TRANSIT: Place = { body: 'transit', en: 'Moon → Mars', ru: 'Луна → Марс' };
+const JEZERO: Place = { body: 'mars', en: 'Jezero crater · Mars', ru: 'Кратер Езеро · Марс', lat: 18.44, lon: 77.45 };
+const ORBIT: Place = { body: 'transit', en: 'Low Earth orbit', ru: 'Низкая околоземная орбита' };
+const smoothstep = (t: number) => { t = Math.min(1, Math.max(0, t)); return t * t * (3 - 2 * t); };
+const logLerp = (a: number, b: number, x: number) => Math.exp(Math.log(a) + (Math.log(b) - Math.log(a)) * smoothstep(x));
+/** Where the camera is in clip k at local time t: the place, and its altitude in metres (null in deep space). */
+function telemetry(k: number, t: number, twin: Place): { place: Place; alt: number | null } {
+  switch (k) {
+    case 0: return { place: MOUTON, alt: logLerp(60000, 600, t) };
+    case 1: return { place: t < .5 ? MOUTON : VALLEY, alt: logLerp(600, 4, t) };
+    case 2: return { place: t < .5 ? VALLEY : RIM, alt: logLerp(4, 40, t) };
+    case 3: return t < .22 ? { place: RIM, alt: logLerp(40, 9000, t / .22) } : t > .78 ? { place: JEZERO, alt: logLerp(40000, 1500, (t - .78) / .22) } : { place: TRANSIT, alt: null };
+    case 4: return { place: JEZERO, alt: logLerp(1500, 25, t) };
+    case 5: return { place: t < .55 ? JEZERO : twin, alt: 25 };
+    default: return t < .4 ? { place: twin, alt: logLerp(25, 12000, t / .4) } : { place: ORBIT, alt: logLerp(12000, 400000, (t - .4) / .6) };
+  }
+}
+const fmtAlt = (m: number | null, lang: Lang) => m == null ? '— — —' : m >= 1000 ? `${(m / 1000).toFixed(m >= 10000 ? 0 : 1)} ${L(lang, 'km', 'км')}` : `${Math.round(m)} ${L(lang, 'm', 'м')}`;
+const fmtCoord = (pl: Place, lang: Lang) => pl.lat == null || pl.lon == null ? (pl.body === 'transit' && pl === ORBIT ? L(lang, '400 km above Earth', '400 км над Землёй') : L(lang, 'interplanetary', 'межпланетный перелёт'))
+  : `${Math.abs(pl.lat).toFixed(2)}°${pl.lat >= 0 ? L(lang, 'N', ' с.ш.') : L(lang, 'S', ' ю.ш.')}  ${Math.abs(pl.lon).toFixed(2)}°${pl.lon >= 0 ? L(lang, 'E', ' в.д.') : L(lang, 'W', ' з.д.')}`;
+const bodyName = (b: Body, lang: Lang) => ({ moon: L(lang, 'MOON', 'ЛУНА'), earth: L(lang, 'EARTH', 'ЗЕМЛЯ'), mars: L(lang, 'MARS', 'МАРС'), transit: L(lang, 'SPACE', 'КОСМОС') })[b];
+const timecode = (sec: number) => { const f = Math.floor(sec * 24); const s2 = Math.floor(f / 24); return `${String(Math.floor(s2 / 60)).padStart(2, '0')}:${String(s2 % 60).padStart(2, '0')}:${String(f % 24).padStart(2, '0')}`; };
+
+/** Mono labels resolve out of signal noise the first time they come into view. */
+function DecodeView({ text }: { text: string }) {
+  const ref = useRef<HTMLSpanElement>(null); const [on, setOn] = useState(false);
+  useEffect(() => {
+    const el = ref.current; if (!el || typeof IntersectionObserver === 'undefined') { setOn(true); return; }
+    const io = new IntersectionObserver(([e]) => { if (e.isIntersecting) { setOn(true); io.disconnect(); } }, { rootMargin: '0px 0px -8% 0px' });
+    io.observe(el); return () => io.disconnect();
+  }, []);
+  return <span ref={ref}><Decode text={text} on={on} speed={18} /></span>;
+}
 
 /** Splits a heading into words so each word can move on its own (strings only; line breaks kept). */
 function Words({ children }: { children: ReactNode }) {
@@ -181,6 +221,26 @@ function useSpatial(root: React.RefObject<HTMLElement | null>) {
           if (!v.seeking && Math.abs(v.currentTime - t) > 1 / 60) v.currentTime = t;
         }
         host.style.setProperty('--film', (filmSp / n).toFixed(4));
+        // flight computer
+        const hud = host.querySelector<HTMLElement>('.hm-hud');
+        if (hud) {
+          const lang = (document.documentElement.lang || 'en').startsWith('ru') ? 'ru' : 'en';
+          const twin: Place = hud.dataset.twin ? JSON.parse(hud.dataset.twin) : { body: 'earth', en: 'Earth', ru: 'Земля' };
+          const { place, alt } = telemetry(ci, ct, twin);
+          const sec = (ci + ct) * 7.92;
+          const set = (k: string, v: string) => { const e = hud.querySelector<HTMLElement>(`[data-hud="${k}"]`); if (e && e.textContent !== v) e.textContent = v; };
+          set('body', bodyName(place.body, lang)); set('place', lang === 'ru' ? place.ru : place.en); set('coord', fmtCoord(place, lang));
+          set('alt', fmtAlt(alt, lang)); set('tc', timecode(sec)); set('frame', String(Math.round(sec * 24)).padStart(4, '0'));
+          if (hud.dataset.body !== place.body) { hud.dataset.body = place.body; host.dataset.body = place.body; }
+        }
+      }
+      { // letterbox opens with the first scroll; the HUD and path step back for the footer
+        const y = window.scrollY;
+        host.style.setProperty('--bars', (1 - smoothstep(y / (vh * .35))).toFixed(3));
+        const foot = host.querySelector<HTMLElement>('.hm-footer');
+        const fr = foot ? foot.getBoundingClientRect().top : vh * 9;
+        // the hero has its own panel on the right: the flight computer arrives once the hero is leaving
+        host.style.setProperty('--hud', Math.min(smoothstep((y - vh * .5) / (vh * .3)), smoothstep((fr - vh * .45) / (vh * .4))).toFixed(3));
       }
       const foot = host.querySelector<HTMLElement>('[data-spatial-footer]');
       if (foot) { const r = foot.getBoundingClientRect(); foot.style.setProperty('--set', clamp((vh - r.top) / (r.height + vh * .2)).toFixed(3)); }
@@ -210,6 +270,8 @@ export function HomePage() {
   const moonCampaign = bestCampaign(moonRun), marsCampaign = bestCampaign(marsRun);
   const marsTwinId = (marsRun?.campaigns.find(c => c.k === 1) ?? marsRun?.campaigns[0])?.sites[0]?.id;
   const marsTwinName = marsTwinId ? tr(siteName(data, marsTwinId)) : null;
+  const marsTwinTile = marsTwinId ? data.candidates.tiles.find(tl => tl.id === marsTwinId) : undefined;
+  const marsTwinPlace: Place | null = marsTwinTile ? { body: 'earth', en: siteName(data, marsTwinId!), ru: tr(siteName(data, marsTwinId!)), lat: marsTwinTile.lat, lon: marsTwinTile.lon } : null;
   const tiles = data.candidates.tiles.filter(t => t.pool !== 'control').length;
   const gapRows = Array.from(new Map([...(moonRun?.gaps.physical ?? []), ...(marsRun?.gaps.physical ?? [])].map(g => [g.gap, g])).values());
   const synthetic = hasSyntheticData(data);
@@ -241,6 +303,24 @@ export function HomePage() {
     <div className="hm-film" aria-hidden="true">
       {FILM.map((base, i) => <video key={base} data-film={i} muted playsInline preload={i < 2 ? 'auto' : 'none'} poster={asset(`media/cinematic/${base}.jpg`)} src={asset(`media/cinematic/${base}-${CLIP_RES}.mp4`)} style={{ opacity: i === 0 ? 1 : 0 }} />)}
     </div>
+    {/* letterbox: the film opens up with the first scroll */}
+    <div className="hm-bars" aria-hidden="true"><i /><i /></div>
+    {/* flight computer: where the camera is, as the scroll flies it */}
+    <div className="hm-hud" aria-hidden="true" data-body="moon" data-twin={marsTwinPlace ? JSON.stringify(marsTwinPlace) : ''}>
+      <div className="hm-hud-body"><i /><span data-hud="body">{bodyName('moon', lang)}</span></div>
+      <div className="hm-hud-place" data-hud="place">{L(lang, MOUTON.en, MOUTON.ru)}</div>
+      <dl>
+        <div><dt>{L(lang, 'Position', 'Координаты')}</dt><dd data-hud="coord">{fmtCoord(MOUTON, lang)}</dd></div>
+        <div><dt>{L(lang, 'Camera alt.', 'Высота камеры')}</dt><dd data-hud="alt">60 {L(lang, 'km', 'км')}</dd></div>
+        <div><dt>{L(lang, 'Film', 'Плёнка')}</dt><dd><span data-hud="tc">00:00:00</span> · <span data-hud="frame">0000</span></dd></div>
+      </dl>
+    </div>
+    {/* the trajectory */}
+    <div className="hm-path" aria-hidden="true">
+      <div className="hm-path-line"><i /></div>
+      {[[0, L(lang, 'Moon', 'Луна')], [1.5, L(lang, 'Earth', 'Земля')], [2.5, L(lang, 'Moon', 'Луна')], [4, L(lang, 'Mars', 'Марс')], [5.6, L(lang, 'Earth', 'Земля')], [6.6, L(lang, 'Orbit', 'Орбита')]].map(([at, label], i) =>
+        <span key={i} className="hm-node" title={String(label)} style={{ top: `${(Number(at) / FILM.length) * 100}%` }}><b /></span>)}
+    </div>
     {/* 01 — Hero */}
     <section className="hm-hero">
       {mars && <div className={`hm-hero-plate hm-hero-plate-mars ${destination === 'mars' ? 'is-active' : ''}`} aria-hidden="true">
@@ -249,11 +329,11 @@ export function HomePage() {
       <div className="hm-hero-shade" aria-hidden="true" />
       <div className="hm-hero-grid">
         <div className="hm-hero-copy">
-          <p className="eg-eyebrow hm-rise" style={{ '--d': '120ms' } as React.CSSProperties}>{L(lang, 'Egiz · Training grounds for the Moon and Mars', 'Egiz · Земные полигоны для Луны и Марса')}</p>
+          <p className="eg-eyebrow hm-rise" style={{ '--d': '120ms' } as React.CSSProperties}><Decode text={L(lang, 'Egiz · Training grounds for the Moon and Mars', 'Egiz · Земные полигоны для Луны и Марса')} on delay={200} speed={16} /></p>
           <h1 id="hm-title" className="eg-display hm-hero-title">
-            <span className="hm-line"><span key={destination} className="hm-swap" style={{ '--d': '220ms' } as React.CSSProperties}>{destination === 'mars' ? L(lang, 'Mars', 'Марс') : L(lang, 'The Moon', 'Луна')}</span></span>
-            <span className="hm-line"><span style={{ '--d': '320ms' } as React.CSSProperties}>{L(lang, 'starts', 'начинается')}</span></span>
-            <span className="hm-line"><span style={{ '--d': '420ms' } as React.CSSProperties}>{L(lang, 'here.', 'здесь.')}</span></span>
+            <span className="hm-line hm-line-decode"><Decode key={destination} text={destination === 'mars' ? L(lang, 'Mars', 'Марс') : L(lang, 'The Moon', 'Луна')} on delay={300} speed={34} /></span>
+            <span className="hm-line hm-line-decode"><Decode text={L(lang, 'starts', 'начинается')} on delay={520} speed={30} /></span>
+            <span className="hm-line hm-line-decode"><Decode text={L(lang, 'here.', 'здесь.')} on delay={760} speed={34} /></span>
           </h1>
           <p className="hm-hero-lede hm-rise" style={{ '--d': '600ms' } as React.CSSProperties}>{L(lang,
             'Every step on another world is rehearsed on this one first. Egiz finds the ground on Earth that comes closest — and says plainly what no place on Earth can teach.',
@@ -297,7 +377,7 @@ export function HomePage() {
 
     {/* 02 — Thesis */}
     <section id="hm-thesis" className="hm-thesis hm-wrap" data-film-anchor>
-      <p className="eg-eyebrow" data-reveal>{L(lang, '01 / The question', '01 / Вопрос')}</p>
+      <p className="eg-eyebrow" data-reveal><DecodeView text={L(lang, '01 / The question', '01 / Вопрос')} /></p>
       <h2 className="hm-statement" data-reveal><Words>{L(lang,
         'Before anyone walks on another world, someone has to find where on Earth to practise. That is the problem Egiz solves.',
         'Прежде чем человек ступит на другой мир, кто-то должен найти, где на Земле к этому готовиться. Эту задачу и решает Egiz.')}</Words></h2>
@@ -315,7 +395,7 @@ export function HomePage() {
     {/* Film — the stand-in: the same light on another world */}
     <section className="hm-plate hm-window" aria-labelledby="hm-twin">
       <div className="hm-plate-copy hm-wrap">
-        <p className="eg-eyebrow" data-reveal>{L(lang, 'The stand-in', 'Двойник')}</p>
+        <p className="eg-eyebrow" data-reveal><DecodeView text={L(lang, 'The stand-in', 'Двойник')} /></p>
         <h2 id="hm-twin" className="eg-display hm-h2" data-reveal><Words>{L(lang, 'This is not the Moon.', 'Это не Луна.')}</Words></h2>
         <p className="hm-body" data-reveal>{L(lang, 'It is Death Valley. The same low light, the same broken ground — and it is a drive away.', 'Это Долина Смерти. Тот же низкий свет, тот же изломанный грунт — и до него можно доехать.')}</p>
       </div>
@@ -331,7 +411,7 @@ export function HomePage() {
         <figcaption className="eg-eyebrow">{L(lang, 'Measured, not illustrated — PGDA LOLA terrain, 10 m posts, 4 × 4 km', 'Измерено, а не нарисовано — рельеф PGDA LOLA, шаг 10 м, 4 × 4 км')}</figcaption>
       </figure>
       <div className="hm-target-copy">
-        <p className="eg-eyebrow" data-reveal>{L(lang, '02 / Destination — Moon', '02 / Цель — Луна')}</p>
+        <p className="eg-eyebrow" data-reveal><DecodeView text={L(lang, '02 / Destination — Moon', '02 / Цель — Луна')} /></p>
         <h2 id="hm-moon" className="eg-display hm-h2" data-reveal><Words>Mons Mouton</Words></h2>
         <p className="hm-body" data-reveal>{L(lang,
           'A mountain near the lunar south pole and a candidate Artemis region. The Sun never rises more than a few degrees; shadows run for kilometres.',
@@ -350,7 +430,7 @@ export function HomePage() {
     {/* 04 — Mars target, full bleed */}
     {mars && <section className="hm-plate hm-window" aria-labelledby="hm-mars" data-film-anchor>
       <div className="hm-plate-copy hm-wrap">
-        <p className="eg-eyebrow" data-reveal>{L(lang, '03 / Destination — Mars', '03 / Цель — Марс')}</p>
+        <p className="eg-eyebrow" data-reveal><DecodeView text={L(lang, '03 / Destination — Mars', '03 / Цель — Марс')} /></p>
         <h2 id="hm-mars" className="eg-display hm-h2 hm-h2-xl" data-reveal><Words>{L(lang, 'Jezero', 'Езеро')}</Words></h2>
         <p className="hm-body" data-reveal>{L(lang,
           'An ancient lake delta and the Perseverance landing site — the reference for rover routes, field geology and sample work.',
@@ -367,7 +447,7 @@ export function HomePage() {
     {/* Film — Mars becomes its Earth twin */}
     {mars && <section className="hm-plate hm-window" aria-labelledby="hm-mars-twin" data-film-anchor>
       <div className="hm-plate-copy hm-wrap">
-        <p className="eg-eyebrow" data-reveal>{L(lang, 'The twin of Mars', 'Двойник Марса')}</p>
+        <p className="eg-eyebrow" data-reveal><DecodeView text={L(lang, 'The twin of Mars', 'Двойник Марса')} /></p>
         <h2 id="hm-mars-twin" className="eg-display hm-h2" data-reveal><Words>{L(lang, 'Mars has a twin here.', 'У Марса есть двойник здесь.')}</Words></h2>
         {marsTwinName && <p className="hm-body" data-reveal>{L(lang, `${marsTwinName}. Found from measured slopes and relief, not by eye.`, `${marsTwinName}. Это место нашли по измеренным уклонам и рельефу, а не на глаз.`)}</p>}
       </div>
@@ -376,7 +456,7 @@ export function HomePage() {
     {/* 05 — Method & the live result */}
     <section className="hm-method hm-wrap" aria-labelledby="hm-method" data-film-anchor>
       <div className="hm-method-head">
-        <p className="eg-eyebrow" data-reveal>{L(lang, '04 / Method', '04 / Метод')}</p>
+        <p className="eg-eyebrow" data-reveal><DecodeView text={L(lang, '04 / Method', '04 / Метод')} /></p>
         <h2 id="hm-method" className="eg-display hm-h2" data-reveal><Words>{L(lang, 'Ask. Search. Tell the truth.', 'Спросить. Найти. Сказать правду.')}</Words></h2>
       </div>
       <ol className="hm-steps">
@@ -400,7 +480,7 @@ export function HomePage() {
     {/* 05 — Intelligence */}
     <section className="hm-method hm-ai hm-wrap" aria-labelledby="hm-ai">
       <div className="hm-method-head">
-        <p className="eg-eyebrow" data-reveal>{L(lang, '05 / Intelligence', '05 / Интеллект')}</p>
+        <p className="eg-eyebrow" data-reveal><DecodeView text={L(lang, '05 / Intelligence', '05 / Интеллект')} /></p>
         <h2 id="hm-ai" className="eg-display hm-h2" data-reveal><Words>{L(lang, 'Ask in words. Get answers from data.', 'Спросите словами. Ответ — из данных.')}</Words></h2>
       </div>
       <ol className="hm-steps">
@@ -417,7 +497,7 @@ export function HomePage() {
     {/* 06 — What Earth cannot test */}
     {gapRows.length > 0 && <section className="hm-gaps hm-wrap" aria-labelledby="hm-gaps">
       <div className="hm-gaps-head">
-        <p className="eg-eyebrow" data-reveal>{L(lang, '06 / Gap ledger', '06 / Реестр пробелов')}</p>
+        <p className="eg-eyebrow" data-reveal><DecodeView text={L(lang, '06 / Gap ledger', '06 / Реестр пробелов')} /></p>
         <h2 id="hm-gaps" className="eg-display hm-h2" data-reveal><Words>{L(lang, 'Where Earth runs out.', 'Где Земля заканчивается.')}</Words></h2>
         <p className="hm-body" data-reveal>{L(lang, 'No desert lowers gravity. No glacier is a vacuum. Egiz names every gap — and the facility that closes it.', 'Ни одна пустыня не ослабит гравитацию. Ни один ледник не станет вакуумом. Egiz называет каждый пробел — и установку, которая его закроет.')}</p>
       </div>
@@ -433,7 +513,7 @@ export function HomePage() {
     {/* 07 — Earth */}
     <section className="hm-plate hm-window hm-window-top" aria-labelledby="hm-earth" data-film-anchor>
       <div className="hm-plate-copy hm-wrap">
-        <p className="eg-eyebrow" data-reveal>{L(lang, '07 / Built in Astana', '07 / Сделано в Астане')}</p>
+        <p className="eg-eyebrow" data-reveal><DecodeView text={L(lang, '07 / Built in Astana', '07 / Сделано в Астане')} /></p>
         <h2 id="hm-earth" className="eg-display hm-h2 hm-h2-xl" data-reveal><Words>{L(lang, <>Earth first.<br />Then everything else.</>, <>Сначала Земля.<br />Потом — всё остальное.</>)}</Words></h2>
         <div className="hm-actions" data-reveal>
           <button className="eg-button" onClick={() => open('campaign')}>{L(lang, 'Design a campaign', 'Создать кампанию')}<ArrowRight size={16} strokeWidth={1.6} /></button>
@@ -444,7 +524,7 @@ export function HomePage() {
     {/* 08 — Index of workspaces */}
     <section className="hm-index hm-wrap" aria-labelledby="hm-index">
       <div className="hm-index-head">
-        <p className="eg-eyebrow" data-reveal>{L(lang, '08 / Workspaces', '08 / Разделы')}</p>
+        <p className="eg-eyebrow" data-reveal><DecodeView text={L(lang, '08 / Workspaces', '08 / Разделы')} /></p>
         <h2 id="hm-index" className="eg-display hm-h2" data-reveal><Words>{L(lang, 'Everything a mission needs.', 'Всё, что нужно миссии.')}</Words></h2>
       </div>
       <ul className="hm-index-list">
