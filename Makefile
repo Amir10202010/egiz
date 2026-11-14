@@ -6,7 +6,7 @@ EARTH_COUNT_PER_STRATUM ?= 1000
 EARTH_OUT_DIR ?= data/processed
 EARTH_ARGS ?=
 
-.PHONY: setup fixtures data earth test check web dev offline serve clean atlas atlas-verify atlas-discover atlas-check world world-verify world-check
+.PHONY: setup fixtures data earth test check web dev offline serve clean atlas atlas-verify atlas-discover atlas-check world world-verify world-check ml-validate-data ml-infer ml-test ml-example ml-infer-geo
 
 setup:
 	python3 -m venv .venv
@@ -123,3 +123,24 @@ geo-validate:
 	$(PYTHON) -m pipeline.geodata validate
 geo-test:
 	$(PYTHON) -m pytest -q pipeline/geodata
+
+# ML intelligence layer (Stage 1). Written with AI assistance (Claude Code); human review pending.
+ML_DATA ?= data/pilot
+ML_OUT ?= artifacts/ml/discovery
+
+ml-validate-data:
+	$(PYTHON) -m pipeline.ml validate-data --data $(ML_DATA)
+
+ml-infer:
+	$(PYTHON) -m pipeline.ml infer --data $(ML_DATA) --out $(ML_OUT)
+
+ml-test:
+	$(PYTHON) -m pytest -q tests/test_ml_stage1.py tests/test_ml_geo.py
+
+ml-example:
+	$(PYTHON) -m pipeline.ml infer --data data/pilot --out contracts/ml/examples --created-at 2026-11-07T00:00:00+00:00
+
+GEO_RELEASE ?= data/geo/geo-0.1.0
+
+ml-infer-geo:
+	$(PYTHON) -m pipeline.ml infer --geo $(GEO_RELEASE) --data data/pilot --out artifacts/ml/discovery-geo
