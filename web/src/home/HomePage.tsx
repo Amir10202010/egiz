@@ -288,6 +288,7 @@ export function HomePage() {
   };
 
   const tools: { route: Route; title: string; ru: string; text: string; textRu: string }[] = [
+    { route: 'planet', title: 'Planetary Studio', ru: 'Планетарная студия', text: 'One investigation from start to finish: discover, inspect, simulate, compare, decide.', textRu: 'Одно исследование от начала до конца: найти, изучить, смоделировать, сравнить, решить.' },
     { route: 'discover', title: 'Discover', ru: 'Поиск аналогов', text: 'Search the whole Earth for analogue ground, and ask the assistant in plain words.', textRu: 'Поиск аналогов по всей Земле — и ассистент, которому можно задать вопрос словами.' },
     { route: 'astral', title: 'Mission Studio', ru: 'Студия миссий', text: 'Measured Jezero ground: terrain units, science targets and a rover you can plan.', textRu: 'Измеренный грунт Езеро: типы рельефа, научные цели и ровер, которым можно управлять.' },
     { route: 'studio', title: 'Lunar World', ru: 'Lunar World', text: 'One workspace where the measured world, the intelligence layer and the simulator share state.', textRu: 'Одно пространство, где измеренный мир, слой анализа и симулятор работают вместе.' },
