@@ -101,6 +101,14 @@ export function isaPressurePa(elevationM: number) {
   return 101325 * (1 - 2.25577e-5 * h) ** 5.25588;
 }
 
+// ----------------------------------------------------------------------------- wording rule
+
+/** A candidate whose fidelity or lower 90 % bound is below this is "closest found — weak match", never a "best analog". */
+export const WEAK_MATCH_THRESHOLD = 0.3;
+export function isWeakMatch(fidelity: number, lo: number): boolean {
+  return !(fidelity >= WEAK_MATCH_THRESHOLD) || !(lo >= WEAK_MATCH_THRESHOLD);
+}
+
 // ----------------------------------------------------------------------------- window accessors
 
 export function col(b: DiscoveryBundle, name: string, i: number): number | null {

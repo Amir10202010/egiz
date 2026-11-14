@@ -6,7 +6,7 @@ import { t } from '../i18n';
 import { downloadJson, downloadText } from '../lib/download';
 import { useAppStore } from '../state/store';
 import { CdfChart, IntervalBar, Radar, SHORT } from './charts';
-import { col, gapLedger, roverExperiment, sha256Hex, slopeCdf, text, type Aggregate } from './engine';
+import { col, gapLedger, isWeakMatch, roverExperiment, sha256Hex, slopeCdf, text, type Aggregate } from './engine';
 import type { DiscoveryBundle, GapRow, RoverBodyModel, RoverExperiment, ScoreShard, ShortlistEntry, TargetEntry, ValidationDoc } from './types';
 
 export interface DetailProps {
@@ -56,6 +56,7 @@ export function CandidateDetail(p: DetailProps) {
       <div>
         <p className="eg-eyebrow">{t('Candidate')} #{rank} · {pool.replace('_', ' ')} · {String(W.country[i] ?? '—')}</p>
         <h2 id="dc-detail-title">{String(W.name[i])}</h2>
+        {isWeakMatch(agg.fidelity[i], agg.lo[i]) && <p className="dc-weak-note"><TriangleAlert size={13} /> {rank === 1 ? t('Closest found — weak match.') : t('Weak match.')} {t('Fidelity')} {agg.fidelity[i].toFixed(2)} [90 % {agg.lo[i].toFixed(2)}–{agg.hi[i].toFixed(2)}]: {t('this is the nearest Earth window found, not a demonstrated analog.')}</p>}
         <p className="dc-mono">{id} · {W.lat[i].toFixed(3)}°, {W.lon[i].toFixed(3)}° · {t('22 km window')} · {String(W.coverage_level[i])} · QA {String(W.quality[i])}</p>
       </div>
       <div className="dc-actions">

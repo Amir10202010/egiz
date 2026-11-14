@@ -27,6 +27,8 @@ Diversified shortlist, general profile (score = fidelity × coverage; 90 % inter
 | 9 (rank 10) | Chile 26.89°S 70.59°W `GX_W070.589_S26.887` | CHL | 0.131 | 0.16 [0.10–0.27] | 0.80 | strong | 99.8 | unexplored |
 | 10 (rank 13) | Greenland 79.91°N 21.87°W `GX_W021.871_N79.910` | GRL | 0.126 | 0.16 [0.09–0.29] | 0.80 | strong | 99.8 | unexplored |
 
+**Rank 1 is the closest window found — weak match**, not a demonstrated analog: fidelity 0.39 with lower 90 % bound 0.20 (rule: fidelity or its lower bound below 0.3).
+
 Kazakhstan hypotheses (not forced): Aralkum (exposed Aral Sea bed) rank 1918 (pct 56.6); Zhamanshin impact structure rank 554 (pct 87.3); Ustyurt plateau escarpment (chink) rank 1507 (pct 65.5); Boszhira canyon, Ustyurt rank 756 (pct 82.8).
 
 Rover experiment on the top window (window-level, model estimate; uses this window's measured slope distribution): a mass-matched Earth test mis-states the traversable fraction by -6.8 points and climbing energy ×7.06. Slope limit and sinkage are body-level (see “Rover model, body level”).
@@ -47,6 +49,8 @@ Diversified shortlist, general profile (score = fidelity × coverage; 90 % inter
 | 8 (rank 8) | Canada 82.55°N 69.66°W `GX_W069.658_N82.549` | CAN | 0.092 | 0.11 [0.06–0.20] | 0.80 | strong | 99.9 | unexplored |
 | 9 (rank 11) | Peru 8.35°S 78.15°W `GX_W078.152_S08.347` | PER | 0.069 | 0.09 [0.05–0.14] | 0.80 | strong | 99.8 | unexplored |
 | 10 (rank 12) | Russia 65.13°N 143.79°E `GX_E143.789_N65.134` | RUS | 0.060 | 0.08 [0.04–0.13] | 0.80 | strong | 99.8 | unexplored |
+
+**Rank 1 is the closest window found — weak match**, not a demonstrated analog: fidelity 0.22 with lower 90 % bound 0.12 (rule: fidelity or its lower bound below 0.3).
 
 Kazakhstan hypotheses (not forced): Aralkum (exposed Aral Sea bed) rank 1192 (pct 73.1); Zhamanshin impact structure rank 713 (pct 83.8); Ustyurt plateau escarpment (chink) rank 935 (pct 78.9); Boszhira canyon, Ustyurt rank 1392 (pct 68.8).
 
@@ -69,6 +73,8 @@ Diversified shortlist, general profile (score = fidelity × coverage; 90 % inter
 | 9 (rank 9) | Russia 70.33°N 94.88°E `GX_E094.884_N70.330` | RUS | 0.163 | 0.20 [0.11–0.39] | 0.80 | strong | 99.8 | unexplored |
 | 10 (rank 10) | Chile 26.89°S 70.59°W `GX_W070.589_S26.887` | CHL | 0.160 | 0.20 [0.11–0.35] | 0.80 | strong | 99.8 | unexplored |
 
+**Rank 1 is the closest window found — weak match**, not a demonstrated analog: fidelity 0.35 with lower 90 % bound 0.19 (rule: fidelity or its lower bound below 0.3).
+
 Kazakhstan hypotheses (not forced): Aralkum (exposed Aral Sea bed) rank 2261 (pct 50.3); Zhamanshin impact structure rank 451 (pct 89.6); Ustyurt plateau escarpment (chink) rank 2471 (pct 46.2); Boszhira canyon, Ustyurt rank 541 (pct 87.7).
 
 Rover experiment on the top window (window-level, model estimate; uses this window's measured slope distribution): a mass-matched Earth test mis-states the traversable fraction by -2.2 points and climbing energy ×7.47. Slope limit and sinkage are body-level (see “Rover model, body level”).
@@ -89,6 +95,8 @@ Diversified shortlist, general profile (score = fidelity × coverage; 90 % inter
 | 8 (rank 8) | Chile 25.81°S 68.78°W `GX_W068.780_S25.807` | CHL | 0.151 | 0.19 [0.10–0.34] | 0.80 | strong | 99.9 | near_established |
 | 9 (rank 9) | Chile 26.89°S 70.59°W `GX_W070.589_S26.887` | CHL | 0.143 | 0.18 [0.10–0.31] | 0.80 | strong | 99.8 | unexplored |
 | 10 (rank 10) | Russia 68.77°N 130.27°E `GX_E130.272_N68.774` | RUS | 0.143 | 0.18 [0.10–0.32] | 0.80 | strong | 99.8 | unexplored |
+
+**Rank 1 is the closest window found — weak match**, not a demonstrated analog: fidelity 0.31 with lower 90 % bound 0.18 (rule: fidelity or its lower bound below 0.3).
 
 Kazakhstan hypotheses (not forced): Aralkum (exposed Aral Sea bed) rank 2067 (pct 54.3); Zhamanshin impact structure rank 450 (pct 89.7); Ustyurt plateau escarpment (chink) rank 2658 (pct 42.5); Boszhira canyon, Ustyurt rank 707 (pct 83.8).
 
@@ -111,6 +119,8 @@ Diversified shortlist, general profile (score = fidelity × coverage; 90 % inter
 | 9 (rank 11) | Egypt 28.89°N 33.64°E `GX_E033.642_N28.892` | EGY | 0.112 | 0.14 [0.08–0.24] | 0.80 | strong | 99.8 | unexplored |
 | 10 (rank 8) | Canada 80.10°N 74.39°W `GX_W074.394_N80.098` | CAN | 0.113 | 0.14 [0.07–0.27] | 0.80 | strong | 99.8 | unexplored |
 
+**Rank 1 is the closest window found — weak match**, not a demonstrated analog: fidelity 0.37 with lower 90 % bound 0.22 (rule: fidelity or its lower bound below 0.3).
+
 Kazakhstan hypotheses (not forced): Aralkum (exposed Aral Sea bed) rank 1933 (pct 56.4); Zhamanshin impact structure rank 777 (pct 82.1); Ustyurt plateau escarpment (chink) rank 2310 (pct 49.0); Boszhira canyon, Ustyurt rank 877 (pct 79.9).
 
 Rover experiment on the top window (window-level, model estimate; uses this window's measured slope distribution): a mass-matched Earth test mis-states the traversable fraction by -6.8 points and climbing energy ×7.06. Slope limit and sinkage are body-level (see “Rover model, body level”).
@@ -131,6 +141,8 @@ Diversified shortlist, general profile (score = fidelity × coverage; 90 % inter
 | 8 (rank 9) | Canada 64.32°N 135.96°W `GX_W135.963_N64.319` | CAN | 0.095 | 0.12 [0.07–0.21] | 0.80 | strong | 99.8 | unexplored |
 | 9 (rank 14) | Greenland 81.91°N 49.60°W `GX_W049.596_N81.905` | GRL | 0.083 | 0.10 [0.06–0.18] | 0.80 | strong | 99.7 | unexplored |
 | 10 (rank 15) | Chile 26.89°S 70.59°W `GX_W070.589_S26.887` | CHL | 0.082 | 0.10 [0.06–0.18] | 0.80 | strong | 99.7 | unexplored |
+
+**Rank 1 is the closest window found — weak match**, not a demonstrated analog: fidelity 0.36 with lower 90 % bound 0.19 (rule: fidelity or its lower bound below 0.3).
 
 Kazakhstan hypotheses (not forced): Aralkum (exposed Aral Sea bed) rank 1663 (pct 62.0); Zhamanshin impact structure rank 892 (pct 79.6); Ustyurt plateau escarpment (chink) rank 1273 (pct 70.6); Boszhira canyon, Ustyurt rank 1045 (pct 75.8).
 
@@ -235,18 +247,20 @@ Traction-limited slope and wheel sinkage depend only on gravity, the rover and t
 
 Population: 3640 global-lattice windows (near-equal-area land sample, 220 km spacing). Draws: 128.
 
-| Target | n positives | ROC AUC [90 % bootstrap] | AUC vs controls | recall@50 | precision@50 (chance) | seed ρ |
-|---|---|---|---|---|---|---|
-| MOON_MONS_MOUTON | 5 | 0.8895 [0.8539–0.9244] | 1.0 | 0.0 | 0.0 (0.0014) | 0.95773 |
-| MOON_SHACKLETON_RIM | 5 | 0.7935 [0.7094–0.8744] | 1.0 | 0.0 | 0.0 (0.0014) | 0.95094 |
-| MOON_CONNECTING_RIDGE | 5 | 0.8942 [0.8729–0.9132] | 1.0 | 0.0 | 0.0 (0.0014) | 0.95971 |
-| MOON_SHACKLETON_PEAK | 5 | 0.9082 [0.8703–0.939] | 1.0 | 0.0 | 0.0 (0.0014) | 0.95526 |
-| MOON_DE_GERLACHE_RIM | 5 | 0.8969 [0.8521–0.9392] | 1.0 | 0.0 | 0.0 (0.0014) | 0.96041 |
-| MOON_MALAPERT | 5 | 0.8627 [0.8042–0.9177] | 1.0 | 0.0 | 0.0 (0.0014) | 0.95591 |
-| MARS_JEZERO | 10 | 0.7951 [0.6525–0.9306] | 0.85 | 0.1 | 0.02 (0.0027) | 0.9816 |
-| MARS_GALE | 10 | 0.8059 [0.6567–0.935] | 0.85 | 0.1 | 0.02 (0.0027) | 0.98089 |
-| MARS_OXIA_PLANUM | 10 | 0.6736 [0.4941–0.8257] | 0.775 | 0.0 | 0.0 (0.0027) | 0.9812 |
-| MARS_UTOPIA_ZHURONG | 10 | 0.6395 [0.4763–0.7844] | 0.8 | 0.0 | 0.0 (0.0027) | 0.9663 |
+| Target | n positives | ROC AUC [90 % bootstrap] | AUC vs hard control [90 %] | AUC vs easy controls | recall@50 | precision@50 (chance) | seed ρ |
+|---|---|---|---|---|---|---|---|
+| MOON_MONS_MOUTON | 5 | 0.8895 [0.8539–0.9244] | 0.6922 [0.5863–0.803] | 1.0 | 0.0 | 0.0 (0.0014) | 0.95773 |
+| MOON_SHACKLETON_RIM | 5 | 0.7935 [0.7094–0.8744] | 0.3927 [0.0743–0.6643] | 1.0 | 0.0 | 0.0 (0.0014) | 0.95094 |
+| MOON_CONNECTING_RIDGE | 5 | 0.8942 [0.8729–0.9132] | 0.6709 [0.5987–0.7478] | 1.0 | 0.0 | 0.0 (0.0014) | 0.95971 |
+| MOON_SHACKLETON_PEAK | 5 | 0.9082 [0.8703–0.939] | 0.7192 [0.6007–0.8266] | 1.0 | 0.0 | 0.0 (0.0014) | 0.95526 |
+| MOON_DE_GERLACHE_RIM | 5 | 0.8969 [0.8521–0.9392] | 0.743 [0.6385–0.8554] | 1.0 | 0.0 | 0.0 (0.0014) | 0.96041 |
+| MOON_MALAPERT | 5 | 0.8627 [0.8042–0.9177] | 0.6829 [0.5327–0.8391] | 1.0 | 0.0 | 0.0 (0.0014) | 0.95591 |
+| MARS_JEZERO | 10 | 0.7951 [0.6525–0.9306] | 0.4786 [0.295–0.6604] | 0.85 | 0.1 | 0.02 (0.0027) | 0.9816 |
+| MARS_GALE | 10 | 0.8059 [0.6567–0.935] | 0.5077 [0.3227–0.696] | 0.85 | 0.1 | 0.02 (0.0027) | 0.98089 |
+| MARS_OXIA_PLANUM | 10 | 0.6736 [0.4941–0.8257] | 0.2348 [0.1149–0.4055] | 0.775 | 0.0 | 0.0 (0.0027) | 0.9812 |
+| MARS_UTOPIA_ZHURONG | 10 | 0.6395 [0.4763–0.7844] | 0.2081 [0.0889–0.3767] | 0.8 | 0.0 | 0.0 (0.0027) | 0.9663 |
+
+Hard control: population windows with bare_frac >= 0.5 and precip_annual_mm <= 250, |latitude| within +-10 deg of each positive; AUC averaged per positive over its own band. Matched controls per positive: MOON_MONS_MOUTON [222, 256, 290, 228, 0]; MOON_SHACKLETON_RIM [222, 256, 290, 228, 0]; MOON_CONNECTING_RIDGE [222, 256, 290, 228, 0]; MOON_SHACKLETON_PEAK [222, 256, 290, 228, 0]; MOON_DE_GERLACHE_RIM [222, 256, 290, 228, 0]; MOON_MALAPERT [222, 256, 290, 228, 0]; MARS_JEZERO [1, 222, 93, 250, 290, 170, 1, 1, 312, 182]; MARS_GALE [1, 222, 93, 250, 290, 170, 1, 1, 312, 182]; MARS_OXIA_PLANUM [1, 222, 93, 250, 290, 170, 1, 1, 312, 182]; MARS_UTOPIA_ZHURONG [1, 222, 93, 250, 290, 170, 1, 1, 312, 182]. Bands with a single control give a very noisy per-positive AUC.
 
 Ablation (AUC without each dimension) and weight sensitivity:
 
@@ -266,4 +280,6 @@ Caveats:
 * Positive labels come from where analog campaigns were run, which reflects logistics, geology training and history as much as similarity to a specific target region. Low AUC is therefore not proof of a wrong model, and high AUC is not proof of a right one.
 * n_positive is 5 (Moon) or 10 (Mars); confidence intervals are wide. No weights or tolerances were tuned on these results.
 * Lunar positives are mostly low-latitude Apollo-era geology training sites, while the lunar targets are south-polar; the illumination dimension deliberately favours high-latitude Earth windows.
+* AUC against the designated controls (forest, farmland, delta) is an easy test. The hard negative control (bare, arid, latitude-matched windows) is the more informative comparison.
+* recall@50 and precision@50 are low or zero for most targets: known analog sites rarely appear in the Earth-wide top 50, so a high AUC means 'ranked above typical land', not 'found the known analogs first'.
 

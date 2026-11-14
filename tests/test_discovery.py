@@ -280,6 +280,43 @@ def test_auc():
     assert auc(np.array([0.0]), np.array([1.0, 2.0])) == 0.0
 
 
+def test_hard_negative_control_is_bare_arid_and_latitude_matched():
+    from pipeline.discovery.fingerprint import Window
+    from pipeline.discovery.validation import (
+        HARD_NEG,
+        evaluate_hard_negative,
+        hard_negative_bands,
+        matched_auc,
+    )
+
+    def w(lat, bare, prec):
+        return Window(f"W{lat}_{bare}_{prec}", "earth", "global_lattice", "W", 0.0, lat, "L4_validated", "pass", "index",
+                      {"bare_frac": bare, "precip_annual_mm": prec})
+    E = [w(20, 0.9, 50), w(-25, 0.8, 100), w(60, 0.9, 50),   # bare+arid at |lat| 20, 25 (south) and 60
+         w(22, 0.1, 50), w(21, 0.9, 900), w(23, None, 50),   # vegetated, wet, missing -> excluded
+         w(24, 0.9, 50)]                                     # the positive itself (excluded even if bare/arid)
+    pop = np.ones(len(E), bool)
+    cand, bands = hard_negative_bands(E, [6], pop)
+    assert set(cand) == {0, 1, 2}
+    assert set(bands[0]) == {0, 1}  # |lat| within 10 deg of 24, either hemisphere; 60 N excluded
+    assert HARD_NEG["bare_frac_min"] == 0.5 and HARD_NEG["precip_annual_mm_max"] == 250.0
+    score = np.array([0.1, 0.9, 0.0, 0.0, 0.0, 0.0, 0.5])
+    assert matched_auc(score, [6], bands) == pytest.approx(0.5)
+    out = evaluate_hard_negative(score, E, [6], pop, np.random.default_rng(0))
+    assert out["n_hard_negative"] == 3 and out["n_per_positive"] == [2] and out["auc"] == 0.5
+    assert out["auc_90ci"] is None  # a single matched positive gives no interval rather than a fake one
+    none = evaluate_hard_negative(score, [w(80, 0.1, 900)] + E[6:], [1], np.ones(2, bool), np.random.default_rng(0))
+    assert none["auc"] is None and none["n_positive_matched"] == 0
+
+
+def test_weak_match_wording_rule():
+    from pipeline.discovery.report import weak_match
+    assert weak_match(0.39, 0.20)       # Mons Mouton-like: fidelity above 0.3 but lower bound below
+    assert weak_match(0.22, 0.12)
+    assert weak_match(None, None)
+    assert not weak_match(0.63, 0.42)
+
+
 # ----------------------------------------------------------------------------- committed bundle
 
 @pytest.mark.skipif(not BUNDLE.exists(), reason="discovery bundle not built")

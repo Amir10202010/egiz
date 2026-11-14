@@ -75,9 +75,11 @@ export interface ScoreShard {
   schema: 'egiz.discovery_scores'; version: string; target: string; dims: string[]; status_codes: DimStatus[];
   s50: (number | null)[][]; lo: (number | null)[][]; hi: (number | null)[][]; status: number[][]; w1_deg: (number | null)[];
 }
+/** Bare, arid, latitude-matched negative control (pipeline.discovery.validation.evaluate_hard_negative). */
+export interface HardNegative { definition: string; n_hard_negative: number; n_per_positive: number[]; n_positive_matched: number; auc: number | null; auc_90ci: number[] | null }
 export interface ValidationTarget {
   target: string; body: Body; positives: string[];
-  metrics: Record<string, number | number[] | null>;
+  metrics: { [k: string]: number | number[] | null | HardNegative | undefined; hard_negative?: HardNegative };
   per_positive: { site: string; window: string; aspects: string[]; score: number; percentile: number }[];
   ablation_auc_without: Record<string, number>;
   sensitivity: { auc_p05_p50_p95: number[]; top10_jaccard_p05_p50_p95: number[] };

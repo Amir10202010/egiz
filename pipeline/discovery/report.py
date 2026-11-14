@@ -9,6 +9,11 @@ import json
 from pipeline.discovery import OUT, ROOT
 
 DOC = ROOT / "docs" / "discovery" / "RESULTS.md"
+WEAK_MATCH = 0.3  # same rule as web/src/discover/engine.ts isWeakMatch
+
+
+def weak_match(fidelity, lo) -> bool:
+    return not (fidelity is not None and fidelity >= WEAK_MATCH) or not (lo is not None and lo >= WEAK_MATCH)
 
 
 def _f(v, nd=3):
@@ -43,6 +48,11 @@ def write_report() -> str:
             L.append(f"| {n} (rank {e['rank']}) | {name[e['window']]} `{e['window']}` | {country[e['window']] or '—'} | "
                      f"{_f(e['score'])} | {_f(e['fidelity'], 2)} [{_f(e['lo'], 2)}–{_f(e['hi'], 2)}] | {_f(e['coverage'], 2)} | "
                      f"{e['category']} | {_f(e['score_percentile'], 1)} | {novelty[e['window']]} |")
+        top0 = t["shortlist"][0] if t["shortlist"] else None
+        if top0 and weak_match(top0["fidelity"], top0["lo"]):
+            L += ["", f"**Rank 1 is the closest window found — weak match**, not a demonstrated analog: fidelity "
+                      f"{_f(top0['fidelity'], 2)} with lower 90 % bound {_f(top0['lo'], 2)} (rule: fidelity or its lower "
+                      f"bound below {WEAK_MATCH})."]
         hyp = [x for x in t["benchmark"] if x["role"] == "hypothesis"]
         if hyp:
             L += ["", "Kazakhstan hypotheses (not forced): " + "; ".join(
@@ -71,13 +81,21 @@ def write_report() -> str:
         L += [""] + [f"* {n}." for n in notes] + [""]
     if v:
         L += ["## Validation", "", f"Population: {v['population']}. Draws: {v['draws']}.", "",
-              "| Target | n positives | ROC AUC [90 % bootstrap] | AUC vs controls | recall@50 | precision@50 (chance) | seed ρ |",
-              "|---|---|---|---|---|---|---|"]
+              "| Target | n positives | ROC AUC [90 % bootstrap] | AUC vs hard control [90 %] | AUC vs easy controls | recall@50 | precision@50 (chance) | seed ρ |",
+              "|---|---|---|---|---|---|---|---|"]
         for r in v["targets"]:
             m = r["metrics"]
             ci = m.get("auc_90ci") or ["—", "—"]
-            L.append(f"| {r['target']} | {m['n_positive']} | {m['auc']} [{ci[0]}–{ci[1]}] | {m['auc_vs_designated_controls']} | "
+            h = m.get("hard_negative") or {}
+            hci = h.get("auc_90ci") or ["—", "—"]
+            L.append(f"| {r['target']} | {m['n_positive']} | {m['auc']} [{ci[0]}–{ci[1]}] | {h.get('auc', '—')} [{hci[0]}–{hci[1]}] | "
+                     f"{m['auc_vs_designated_controls']} | "
                      f"{m['recall@50']} | {m['precision@50']} ({m['chance_precision']}) | {r['reproducibility']['spearman_seed_2026_vs_7']} |")
+        h0 = next((r["metrics"].get("hard_negative") for r in v["targets"] if r["metrics"].get("hard_negative")), None)
+        if h0:
+            L += ["", f"Hard control: {h0['definition']}. Matched controls per positive: " + "; ".join(
+                f"{r['target']} {r['metrics']['hard_negative']['n_per_positive']}" for r in v["targets"]
+                if r["metrics"].get("hard_negative")) + ". Bands with a single control give a very noisy per-positive AUC."]
         L += ["", "Ablation (AUC without each dimension) and weight sensitivity:", ""]
         for r in v["targets"]:
             abl = ", ".join(f"{d} {a}" for d, a in r["ablation_auc_without"].items())

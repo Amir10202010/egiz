@@ -7,7 +7,7 @@ import { readFileSync, existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 declare const process: { cwd(): string };
 import { describe, expect, it } from 'vitest';
-import { aggregate, col, diverseTop, gapLedger, isaPressurePa, noonElevationRange, percentileFn, roverExperiment, slopeCdf, somiglianaGravity } from './engine';
+import { aggregate, col, diverseTop, gapLedger, isaPressurePa, isWeakMatch, noonElevationRange, percentileFn, roverExperiment, slopeCdf, somiglianaGravity } from './engine';
 import { answerOffline, callTool, plan, type ToolContext } from './copilot';
 import type { DiscoveryBundle, ScoreShard } from './types';
 
@@ -22,6 +22,16 @@ describe('physics helpers (Python twins in pipeline/discovery/dimensions.py)', (
     expect(noonElevationRange(-85.4, 1.54)).toEqual([expect.closeTo(3.06, 6), expect.closeTo(6.14, 6)]);
     expect(somiglianaGravity(0)).toBeCloseTo(9.7803, 4);
     expect(isaPressurePa(5000)).toBeCloseTo(54020, -2);
+  });
+  it('applies the weak-match wording rule (fidelity or lower 90 % bound below 0.3)', () => {
+    expect(isWeakMatch(0.39, 0.20)).toBe(true);
+    expect(isWeakMatch(0.22, 0.12)).toBe(true);
+    expect(isWeakMatch(NaN, NaN)).toBe(true);
+    expect(isWeakMatch(0.63, 0.42)).toBe(false);
+    if (bundle) for (const t of bundle.targets) {
+      const e = t.shortlist[0];
+      expect(isWeakMatch(e.fidelity, e.lo), t.id).toBe(t.body === 'moon');  // committed bundle: every lunar rank 1 is weak
+    }
   });
   it('builds a monotone slope CDF without zero-filling missing knots', () => {
     const cdf = slopeCdf(n => ({ slope_f100_p50_deg: 3, slope_f100_p90_deg: 8 } as Record<string, number>)[n] ?? null)!;

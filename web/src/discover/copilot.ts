@@ -151,7 +151,10 @@ export const TOOLS: Tool[] = [
       const m = v.metrics as Record<string, number | number[] | null>;
       const ci = Array.isArray(m.auc_90ci) ? ` [${m.auc_90ci.join('–')}]` : '';
       return { tool: 'validation_summary', ok: true, summary: `ROC AUC ${m.auc}${ci} for ${v.positives.length} published analogs vs ${m.n_background} lattice windows`,
-        facts: v.per_positive.map(p => ({ label: p.site, value: `percentile ${f2(p.percentile, 1)}`, evidence: p.aspects.join(', ') })), notes: ctx.validation!.caveats };
+        facts: [
+          ...(v.metrics.hard_negative ? [{ label: 'AUC vs bare, arid, latitude-matched control', value: `${v.metrics.hard_negative.auc ?? '—'}${Array.isArray(v.metrics.hard_negative.auc_90ci) ? ` [90 % ${v.metrics.hard_negative.auc_90ci.join('–')}]` : ''} (${v.metrics.hard_negative.n_hard_negative} windows)`, evidence: 'validation.json hard_negative' }] : []),
+          { label: 'recall@50', value: String(m['recall@50'] ?? '—'), evidence: 'validation.json' },
+          ...v.per_positive.map(p => ({ label: p.site, value: `percentile ${f2(p.percentile, 1)}`, evidence: p.aspects.join(', ') }))], notes: ctx.validation!.caveats };
     },
   },
   {
