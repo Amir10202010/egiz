@@ -1,30 +1,17 @@
-// EGIZ landing: a film, a studio and one guide. The opening film (Act I) flies Moon → Earth → Moon →
-// Mars; a studio object, the EGIZ Navigator, travels with the visitor from the first frame to the
-// footer and points at whatever matters. Every figure is read from the loaded dataset.
-// AI-assisted implementation; human review pending.
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowRight, ArrowUpRight, Menu, X, Volume2, VolumeX } from 'lucide-react';
-import { t as tr, useLanguage, setLanguage } from '../i18n';
+// EGIZ landing narrative. Every figure on this page is read from the loaded dataset.
+import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { ArrowRight, ArrowUpRight } from 'lucide-react';
+import { t as tr, useLanguage } from '../i18n';
 import { useAppStore, type Route } from '../state/store';
 import type { AppData, Run, Target } from '../types/contracts';
 import { hasSyntheticData } from '../data/load';
 import { MissionGlyph } from '../mission/MissionGlyph';
 import { setLaunchIntent, type LaunchOverrides } from '../mission/launchIntent';
 import type { Mode } from '../mission/types';
-import { loadCinema, type CinemaAsset } from './cinema/cinema';
-import { MatchChapter } from './match/MatchChapter';
-import { FilmAct } from './film/FilmAct';
-import { Reticle } from './film/Reticle';
-import { Navigator } from './navigator/Navigator';
-import { ScrubScene } from './film/ScrubScene';
-import { Soundscape } from './world/soundscape';
-import copy from '../content/copy.json';
-import './landing.css';
-
-type Lang = 'en' | 'ru';
-const L = <T,>(lang: Lang, en: T, ru: T) => (lang === 'ru' ? ru : en);
+import './home.css';
 
 interface Param { key: string; group: 'rover' | 'vehicle'; en: string; ru: string; unit: string; min: number; max: number; step: number; value: number; maxFrom?: string }
+/** The few inputs that change each expedition the most; everything else stays in the lab. */
 const PARAMS: Record<Mode, Param[]> = {
   rover: [
     { key: 'speed', group: 'rover', en: 'Cruise speed', ru: 'Скорость', unit: 'm/s', min: 0.2, max: 2, step: 0.1, value: 0.8 },
@@ -34,248 +21,370 @@ const PARAMS: Record<Mode, Param[]> = {
   launch: [
     { key: 'thrust', group: 'vehicle', en: 'Thrust', ru: 'Тяга', unit: 'N', min: 10000, max: 60000, step: 1000, value: 24000 },
     { key: 'fuel', group: 'vehicle', en: 'Propellant', ru: 'Топливо', unit: 'kg', min: 200, max: 1500, step: 50, value: 600 },
-    { key: 'angle', group: 'vehicle', en: 'Tilt', ru: 'Наклон', unit: '°', min: 0, max: 30, step: 1, value: 0 },
+    { key: 'angle', group: 'vehicle', en: 'Tilt from vertical', ru: 'Наклон', unit: '°', min: 0, max: 30, step: 1, value: 0 },
   ],
   descent: [
-    { key: 'initialAltitude', group: 'vehicle', en: 'Start altitude', ru: 'Высота', unit: 'm', min: 400, max: 3000, step: 100, value: 1200 },
-    { key: 'initialVelocity', group: 'vehicle', en: 'Vertical speed', ru: 'Скорость', unit: 'm/s', min: -80, max: -5, step: 1, value: -35 },
-    { key: 'ignitionAltitude', group: 'vehicle', en: 'Ignition', ru: 'Включение', unit: 'm', min: 100, max: 2900, step: 50, value: 800, maxFrom: 'initialAltitude' },
+    { key: 'initialAltitude', group: 'vehicle', en: 'Start altitude', ru: 'Начальная высота', unit: 'm', min: 400, max: 3000, step: 100, value: 1200 },
+    { key: 'initialVelocity', group: 'vehicle', en: 'Vertical speed', ru: 'Вертикальная скорость', unit: 'm/s', min: -80, max: -5, step: 1, value: -35 },
+    { key: 'ignitionAltitude', group: 'vehicle', en: 'Engine ignition', ru: 'Включение двигателя', unit: 'm', min: 100, max: 2900, step: 50, value: 800, maxFrom: 'initialAltitude' },
   ],
   eva: [
     { key: 'speed', group: 'rover', en: 'Walking speed', ru: 'Скорость', unit: 'm/s', min: 0.5, max: 2, step: 0.1, value: 1 },
     { key: 'maxSlope', group: 'rover', en: 'Slope limit', ru: 'Предел уклона', unit: '°', min: 10, max: 30, step: 1, value: 20 },
-    { key: 'batteryWh', group: 'rover', en: 'Energy', ru: 'Запас энергии', unit: 'Wh', min: 1000, max: 6000, step: 250, value: 3000 },
+    { key: 'batteryWh', group: 'rover', en: 'Life-support energy', ru: 'Запас энергии', unit: 'Wh', min: 1000, max: 6000, step: 250, value: 3000 },
   ],
 };
-const paramMax = (p: Param, v: Record<string, number>) => p.maxFrom ? Math.min(p.max, (v[p.maxFrom] ?? p.max) - p.step) : p.max;
-const paramValue = (p: Param, v: Record<string, number>) => Math.min(v[p.key] ?? p.value, paramMax(p, v));
-const defaultsFor = (m: Mode) => Object.fromEntries(PARAMS[m].map(p => [p.key, p.value]));
-const MODES: { mode: Mode; en: string; ru: string }[] = [
-  { mode: 'rover', en: 'Rover', ru: 'Ровер' }, { mode: 'launch', en: 'Launch', ru: 'Старт' },
-  { mode: 'descent', en: 'Landing', ru: 'Посадка' }, { mode: 'eva', en: 'Moonwalk', ru: 'Выход' },
+const paramMax = (p: Param, values: Record<string, number>) => p.maxFrom ? Math.min(p.max, (values[p.maxFrom] ?? p.max) - p.step) : p.max;
+const paramValue = (p: Param, values: Record<string, number>) => Math.min(values[p.key] ?? p.value, paramMax(p, values));
+const defaultsFor = (mode: Mode) => Object.fromEntries(PARAMS[mode].map(p => [p.key, p.value]));
+
+const EXPEDITIONS: { mode: Mode; en: string; ru: string; textEn: string; textRu: string }[] = [
+  { mode: 'rover', en: 'Rover traverse', ru: 'Маршрут ровера', textEn: 'Drive across measured terrain', textRu: 'Проехать по измеренному рельефу' },
+  { mode: 'launch', en: 'Launch & flight', ru: 'Взлёт и полёт', textEn: 'Test a rocket launch', textRu: 'Испытать запуск ракеты' },
+  { mode: 'descent', en: 'Descent & landing', ru: 'Спуск и посадка', textEn: 'Try a surface landing', textRu: 'Попробовать посадку' },
+  { mode: 'eva', en: 'Habitat & EVA', ru: 'База и выход', textEn: 'Plan surface exploration', textRu: 'Спланировать выход на поверхность' },
 ];
 
-const siteName = (data: AppData, id: string) => (data.candidates.tiles.find(t => t.id === id)?.name ?? id).replace(/ regional window$/i, '');
-const firstSite = (run: Run | undefined) => run?.campaigns.find(c => c.k === 1) ?? run?.campaigns[0];
-const shortName = (name: string) => name.split(/[/,]/)[0].trim();
+type Lang = 'en' | 'ru';
+const L = <T,>(lang: Lang, en: T, ru: T) => (lang === 'ru' ? ru : en);
+const asset = (path: string) => `${import.meta.env.BASE_URL}${path}`;
 
-/** Elements marked .lx-in rise out of blur as they enter; --i staggers siblings. */
+/** Phones get the 720p rendition, larger screens 1080p. */
+const CLIP_RES = typeof window !== 'undefined' && Math.max(window.innerWidth, window.innerHeight) * Math.min(window.devicePixelRatio || 1, 2) < 1500 ? 720 : 1080;
+/** A generated film clip in place of a still: plays when it is on screen, holds its last frame, replays on return.
+ *  Visitors who asked for less motion get the last frame as a still. */
+function Clip({ base, active = true, parallax, eager }: { base: string; active?: boolean; parallax?: string; eager?: boolean }) {
+  const ref = useRef<HTMLVideoElement>(null);
+  const reduced = typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+  useEffect(() => {
+    const v = ref.current; if (!v || reduced) return;
+    if (!active) { v.pause(); return; }
+    if (typeof IntersectionObserver === 'undefined') { v.play().catch(() => {}); return; }
+    const io = new IntersectionObserver(([e]) => {
+      if (e.isIntersecting && e.intersectionRatio > .3) { if (v.ended) v.currentTime = 0; v.play().catch(() => {}); } else v.pause();
+    }, { threshold: [0, .3] });
+    io.observe(v); return () => io.disconnect();
+  }, [active, reduced]);
+  if (reduced) return <img data-parallax={parallax} src={asset(`${base}-end.jpg`)} alt="" decoding="async" />;
+  return <video ref={ref} data-parallax={parallax} muted playsInline preload={eager ? 'auto' : 'metadata'} poster={asset(`${base}.jpg`)} src={asset(`${base}-${CLIP_RES}.mp4`)} />;
+}
+
+function coord(value: number, pos: string, neg: string) { return `${Math.abs(value).toFixed(2)}°${value >= 0 ? pos : neg}`; }
+function latLon(lang: Lang, lat: number, lon: number) {
+  return lang === 'ru' ? `${coord(lat, ' с.ш.', ' ю.ш.')} · ${coord(lon, ' в.д.', ' з.д.')}` : `${coord(lat, 'N', 'S')} · ${coord(lon, 'E', 'W')}`;
+}
+const pct = (v: number) => `${Math.round(v * 100)}`;
+
+/** Fades and lifts elements tagged with data-reveal as they enter the viewport. */
 function useReveal(root: React.RefObject<HTMLElement | null>) {
   useEffect(() => {
-    const host = root.current; if (!host || typeof IntersectionObserver === 'undefined') return;
-    const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { e.target.classList.add('is-in'); io.unobserve(e.target); } }), { rootMargin: '0px 0px -12% 0px' });
-    host.querySelectorAll('.lx-in:not(.is-in)').forEach(el => io.observe(el));
+    const host = root.current; if (!host) return;
+    const nodes = Array.from(host.querySelectorAll<HTMLElement>('[data-reveal]'));
+    if (typeof IntersectionObserver === 'undefined' || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) { nodes.forEach(n => n.classList.add('is-in')); return; }
+    const io = new IntersectionObserver(entries => entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('is-in'); io.unobserve(e.target); } }), { rootMargin: '0px 0px -12% 0px', threshold: .08 });
+    nodes.forEach(n => io.observe(n));
     return () => io.disconnect();
-  });
-}
-/** Buttons lean toward the pointer. */
-function useMagnets(root: React.RefObject<HTMLElement | null>) {
-  useEffect(() => {
-    const host = root.current; if (!host || !window.matchMedia?.('(pointer: fine)').matches) return;
-    const move = (e: PointerEvent) => {
-      const el = (e.target as Element | null)?.closest<HTMLElement>('.lx-mag'); if (!el) return;
-      const r = el.getBoundingClientRect(); const dx = e.clientX - (r.left + r.width / 2), dy = e.clientY - (r.top + r.height / 2);
-      el.style.transform = `translate(${(dx * .18).toFixed(1)}px, ${(dy * .28).toFixed(1)}px)`;
-    };
-    const out = (e: PointerEvent) => { const el = (e.target as Element | null)?.closest<HTMLElement>('.lx-mag'); if (el && !el.contains(e.relatedTarget as Node)) el.style.transform = ''; };
-    host.addEventListener('pointermove', move); host.addEventListener('pointerout', out);
-    return () => { host.removeEventListener('pointermove', move); host.removeEventListener('pointerout', out); };
   }, [root]);
 }
-/** Which of n equal steps a tall section is on as it scrolls through. */
-function useSectionStep(ref: React.RefObject<HTMLElement | null>, steps: number) {
-  const [step, setStep] = useState(0);
+
+/** Slow parallax on full-bleed plates; disabled for reduced motion. */
+function useParallax(root: React.RefObject<HTMLElement | null>) {
   useEffect(() => {
-    let raf = 0;
-    const tick = () => { raf = 0; const el = ref.current; if (!el) return; const r = el.getBoundingClientRect(); const p = Math.min(1, Math.max(0, -r.top / Math.max(1, r.height - window.innerHeight))); setStep(Math.min(steps - 1, Math.floor(p * steps * .999))); };
-    const on = () => { if (!raf) raf = requestAnimationFrame(tick); };
-    tick(); window.addEventListener('scroll', on, { passive: true });
-    return () => { window.removeEventListener('scroll', on); if (raf) cancelAnimationFrame(raf); };
-  }, [ref, steps]);
-  return step;
+    const host = root.current; if (!host || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
+    const plates = Array.from(host.querySelectorAll<HTMLElement>('[data-parallax]'));
+    let frame = 0;
+    const tick = () => {
+      frame = 0; const vh = window.innerHeight;
+      for (const p of plates) {
+        const r = p.parentElement!.getBoundingClientRect();
+        if (r.bottom < 0 || r.top > vh) continue;
+        const progress = (r.top + r.height / 2 - vh / 2) / (vh + r.height);
+        p.style.transform = `translate3d(0, ${(progress * Number(p.dataset.parallax)).toFixed(1)}px, 0) scale(1.08)`;
+      }
+    };
+    const onScroll = () => { if (!frame) frame = requestAnimationFrame(tick); };
+    tick(); window.addEventListener('scroll', onScroll, { passive: true }); window.addEventListener('resize', onScroll);
+    return () => { window.removeEventListener('scroll', onScroll); window.removeEventListener('resize', onScroll); if (frame) cancelAnimationFrame(frame); };
+  }, [root]);
 }
 
-function Counter({ value, suffix = '', lang }: { value: number; suffix?: string; lang: Lang }) {
-  const [v, setV] = useState(0); const el = useRef<HTMLSpanElement>(null);
-  useEffect(() => {
-    const node = el.current; if (!node || typeof IntersectionObserver === 'undefined') { setV(value); return; } let raf = 0;
-    const io = new IntersectionObserver(([e]) => {
-      if (!e.isIntersecting) return; io.disconnect(); const t0 = performance.now();
-      const step = (now: number) => { const k = Math.min(1, (now - t0) / 1400); setV(value * (1 - Math.pow(1 - k, 4))); if (k < 1) raf = requestAnimationFrame(step); };
-      raf = requestAnimationFrame(step);
-    });
-    io.observe(node); return () => { io.disconnect(); cancelAnimationFrame(raf); };
-  }, [value]);
-  return <span ref={el}>{Math.round(v).toLocaleString(lang === 'ru' ? 'ru-RU' : 'en-US')}{suffix}</span>;
+function Spec({ label, children }: { label: string; children: ReactNode }) {
+  return <div className="hm-spec"><dt>{label}</dt><dd>{children}</dd></div>;
+}
+
+function siteName(data: AppData, id: string) {
+  const tile = data.candidates.tiles.find(t => t.id === id);
+  return (tile?.name ?? id).replace(/ regional window$/i, '');
+}
+function bestCampaign(run: Run | undefined) {
+  if (!run?.campaigns.length) return null;
+  return run.campaigns.reduce((a, b) => (b.k > a.k ? b : a));
 }
 
 export function HomePage() {
   const lang = useLanguage(s => s.language) as Lang;
   const { data, navigate, setTarget } = useAppStore();
   const root = useRef<HTMLElement>(null);
-  const studio = useRef<HTMLElement>(null);
-  const [films, setFilms] = useState<CinemaAsset[]>([]);
-  const [menu, setMenu] = useState(false);
   const [destination, setDestination] = useState<'moon' | 'mars'>('moon');
   const [mode, setMode] = useState<Mode>('rover');
   const [params, setParams] = useState<Record<string, number>>(() => defaultsFor('rover'));
-  const [soundOn, setSoundOn] = useState(false);
-  const sound = useRef<Soundscape | null>(null);
-  const studioStep = useSectionStep(studio, 3);
-  useReveal(root); useMagnets(root);
-
-  useEffect(() => { const c = new AbortController(); loadCinema(c.signal).then(a => { if (!c.signal.aborted) setFilms(a); }); return () => c.abort(); }, []);
-  useEffect(() => () => sound.current?.dispose(), []);
-  useEffect(() => { if (!menu) return; const k = (e: KeyboardEvent) => { if (e.key === 'Escape') setMenu(false); }; window.addEventListener('keydown', k); return () => window.removeEventListener('keydown', k); }, [menu]);
-  const toggleSound = async () => {
-    if (!sound.current) sound.current = new Soundscape();
-    if (sound.current.on) { sound.current.disable(); setSoundOn(false); }
-    else { try { await sound.current.enable(); sound.current.setMix({ vacuum: .55, mars: .25, earth: .2 }); setSoundOn(true); } catch { setSoundOn(false); } }
-  };
-
-  const moon = data?.targets.targets.find(t => t.body === 'moon' && t.kind !== 'validation_only') ?? data?.targets.targets.find(t => t.body === 'moon');
-  const mars = data?.targets.targets.find(t => t.body === 'mars' && t.kind !== 'validation_only') ?? data?.targets.targets.find(t => t.body === 'mars');
-  const runFor = useCallback((t?: Target) => t && data?.results.runs.find(r => r.target === t.id), [data]);
-  const scroller = (id: string) => () => document.getElementById(id)?.scrollIntoView({ behavior: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
-  const gaps = useMemo(() => Array.from(new Map([...(runFor(moon)?.gaps.physical ?? []), ...(runFor(mars)?.gaps.physical ?? [])].map(g => [g.gap, g])).values()), [runFor, moon, mars]);
-
+  const chooseMode = (next: Mode) => { setMode(next); setParams(defaultsFor(next)); };
+  useReveal(root); useParallax(root);
   if (!data) return null;
-  const synthetic = hasSyntheticData(data);
+
+  const moon = data.targets.targets.find(t => t.body === 'moon' && t.kind !== 'validation_only') ?? data.targets.targets.find(t => t.body === 'moon');
+  const mars = data.targets.targets.find(t => t.body === 'mars' && t.kind !== 'validation_only') ?? data.targets.targets.find(t => t.body === 'mars');
+  const runFor = (t?: Target) => t && data.results.runs.find(r => r.target === t.id);
+  const templateFor = (t?: Target) => t && data.templates.templates.find(tp => t.templates.includes(tp.id));
+  const moonRun = runFor(moon), marsRun = runFor(mars);
+  const moonCampaign = bestCampaign(moonRun), marsCampaign = bestCampaign(marsRun);
+  const marsTwinId = (marsRun?.campaigns.find(c => c.k === 1) ?? marsRun?.campaigns[0])?.sites[0]?.id;
+  const marsTwinName = marsTwinId ? tr(siteName(data, marsTwinId)) : null;
   const tiles = data.candidates.tiles.filter(t => t.pool !== 'control').length;
-  const marsFirst = firstSite(runFor(mars));
-  const marsTwin = marsFirst?.sites[0] ? tr(shortName(siteName(data, marsFirst.sites[0].id))) : null;
-  const open = (route: Route, target?: Target) => { if (target) setTarget(target.id); navigate(route); window.scrollTo({ top: 0 }); };
-  const launch = (autorun: boolean) => {
+  const gapRows = Array.from(new Map([...(moonRun?.gaps.physical ?? []), ...(marsRun?.gaps.physical ?? [])].map(g => [g.gap, g])).values());
+  const synthetic = hasSyntheticData(data);
+  const currentTarget = destination === 'mars' ? mars : moon;
+  const open = (route: Route, target?: Target) => { if (target) setTarget(target.id); navigate(route); };
+  const startExpedition = (autorun: boolean) => {
     const overrides: LaunchOverrides = {};
-    for (const p of PARAMS[mode]) { const g = (overrides[p.group] ??= {}) as Record<string, number>; g[p.key] = paramValue(p, params); }
-    setLaunchIntent(mode, overrides, autorun); open('lab', destination === 'mars' ? mars : moon);
+    for (const p of PARAMS[mode]) {
+      const group = (overrides[p.group] ??= {}) as Record<string, number>;
+      group[p.key] = paramValue(p, params);
+    }
+    setLaunchIntent(mode, overrides, autorun);
+    open('lab', destination === 'mars' ? mars : moon);
   };
-  const routes = (Object.keys(copy.nav) as Route[]).filter((r): r is Exclude<Route, 'home'> => r !== 'home');
-  const navLabel = (r: Route) => tr((copy.nav as Record<string, string>)[r]);
-  const cards = [
-    { id: 'lx-card-0', n: '01', en: 'Point at a world', ru: 'Укажите цель', sub: L(lang, 'The Moon or Mars. A real landing region, measured from orbit.', 'Луна или Марс. Реальный район посадки, измеренный с орбиты.'), metric: null as null | { v: number; s: string; label: string } },
-    { id: 'lx-card-1', n: '02', en: 'EGIZ searches Earth', ru: 'EGIZ ищет на Земле', sub: L(lang, 'Slopes, roughness, light and cold — scored for every place.', 'Уклоны, шероховатость, свет и холод — для каждого места.'), metric: { v: tiles, s: '', label: L(lang, 'places scored', 'мест оценено') } },
-    { id: 'lx-card-2', n: '03', en: 'An honest answer', ru: 'Честный ответ', sub: L(lang, 'The closest twin — and what no place on Earth can teach.', 'Ближайший двойник — и чему Земля не научит никогда.'), metric: marsFirst ? { v: Math.round(marsFirst.coverage * 100), s: '%', label: L(lang, `of Mars objectives${marsTwin ? ` · ${marsTwin}` : ''}`, `целей Марса${marsTwin ? ` · ${marsTwin}` : ''}`) } : null },
+
+  const tools: { route: Route; title: string; ru: string; text: string; textRu: string }[] = [
+    { route: 'lab', title: 'Engineering lab', ru: 'Инженерная лаборатория', text: 'Measured terrain, vehicles, transfers and surface operations in one 3D workbench.', textRu: 'Измеренный рельеф, техника, перелёты и работа на поверхности — в одном 3D-стенде.' },
+    { route: 'campaign', title: 'Campaign', ru: 'Кампания', text: 'Choose objectives and compute the smallest set of Earth sites that covers them.', textRu: 'Выберите цели и рассчитайте минимальный набор земных площадок, который их покрывает.' },
+    { route: 'twin', title: 'Same Sun', ru: 'Одно Солнце', text: 'Compare a target and an Earth site under identical solar geometry.', textRu: 'Сравните цель и земную площадку при одинаковой геометрии Солнца.' },
+    { route: 'matrix', title: 'Fidelity matrix', ru: 'Матрица соответствия', text: 'Every objective against every site, with the Earth ceiling stated per cell.', textRu: 'Каждая цель против каждой площадки, с пределом Земли в каждой ячейке.' },
+    { route: 'evidence', title: 'Evidence', ru: 'Источники', text: 'Sources, pre-registered validation and the limits of every dataset.', textRu: 'Источники, заранее зарегистрированная проверка и ограничения каждого набора данных.' },
+    { route: 'brief', title: 'Mission brief', ru: 'Задание миссии', text: 'The mission template, its objectives and the constraints behind them.', textRu: 'Шаблон миссии, его цели и ограничения, на которых они основаны.' },
   ];
-  const act = films.filter(f => f.mode === 'film');
-  const finale = films.find(f => f.id === 'S7');
 
-  return <main ref={root} className="lx" aria-labelledby="hm-title">
-    <Navigator />
-    <Reticle />
-
-    {/* ---------- header: one floating capsule ---------- */}
-    <header className="lx-head">
-      <button className="lx-brand lx-mag" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} aria-label="EGIZ">
-        <svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="7" fill="currentColor" /><path d="M3 18.5h26" stroke="#07080b" strokeWidth="2.4" /><path d="M5.5 11.5a12 12 0 0 1 22 0" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" /></svg>
-        <span>EGIZ</span>
-      </button>
-      <nav className="lx-links" aria-label={L(lang, 'Main', 'Основное')}>
-        {(['discover', 'lab', 'studio', 'evidence'] as const).filter(r => (routes as string[]).includes(r)).map(r => <button key={r} onClick={() => open(r)}>{navLabel(r)}</button>)}
-      </nav>
-      <div className="lx-tools">
-        <button className="lx-pill lx-ghost lx-icon" aria-pressed={soundOn} onClick={toggleSound} aria-label={soundOn ? L(lang, 'Sound off', 'Выключить звук') : L(lang, 'Sound on', 'Включить звук')}>{soundOn ? <Volume2 size={15} /> : <VolumeX size={15} />}</button>
-        <div className="lx-lang" role="group" aria-label={L(lang, 'Language', 'Язык')}>
-          <button aria-pressed={lang === 'ru'} onClick={() => setLanguage('ru')}>RU</button><button aria-pressed={lang === 'en'} onClick={() => setLanguage('en')}>EN</button>
-        </div>
-        <button className="lx-pill lx-cta lx-mag" onClick={scroller('lx-mission')}>{L(lang, 'Plan a mission', 'Спланировать')}<ArrowRight size={15} /></button>
-        <button className="lx-pill lx-ghost lx-icon" aria-expanded={menu} aria-label={L(lang, 'All tools', 'Все инструменты')} onClick={() => setMenu(true)}><Menu size={17} /></button>
+  return <main ref={root} className="hm" aria-labelledby="hm-title">
+    {/* 01 — Hero */}
+    <section className="hm-hero">
+      <div className={`hm-hero-plate ${destination === 'moon' ? 'is-active' : ''}`} aria-hidden="true">
+        <Clip base="media/cinematic/hero/s1-arrival" active={destination === 'moon'} eager />
       </div>
-    </header>
-
-    {menu && <div className="lx-menu" role="dialog" aria-modal="true" aria-label={L(lang, 'All tools', 'Все инструменты')}>
-      <button className="lx-pill lx-ghost lx-icon lx-menu-close" onClick={() => setMenu(false)} aria-label={L(lang, 'Close', 'Закрыть')} autoFocus><X size={18} /></button>
-      <p className="lx-eyebrow">{L(lang, 'Inside EGIZ', 'Внутри EGIZ')}</p>
-      <div className="lx-menu-grid">{routes.map((r, i) => <button key={r} className="lx-tile" style={{ '--i': i } as React.CSSProperties} onClick={() => { setMenu(false); open(r); }}>
-        <span className="lx-tile-n">{String(i + 1).padStart(2, '0')}</span><span className="lx-tile-t">{navLabel(r)}</span><ArrowUpRight size={18} />
-      </button>)}</div>
-    </div>}
-
-    {/* ---------- ACT I · the film ---------- */}
-    {act.length > 0 && <FilmAct lang={lang} clips={act} hMax={moon?.h_max_deg ?? null} soundOn={soundOn} onCover={() => {}} onPlan={scroller('lx-mission')} onFinish={() => {}} />}
-
-    {/* ---------- the studio: what EGIZ does, in three moves ---------- */}
-    <section ref={studio} className="lx-studio" data-nav="0.5 0.44 1.15 1" data-nav-m="0.5 0.42 1 1" data-nav-look={cards[studioStep].id} data-step={studioStep}>
-      <div className="lx-studio-frame">
-        <div className="lx-spot" aria-hidden="true" />
-        <div className="lx-floor" aria-hidden="true" />
-        <div className="lx-studio-head">
-          <p className="lx-eyebrow lx-in">{L(lang, 'What EGIZ does', 'Что делает EGIZ')}</p>
-          <h2 className="lx-h lx-in" style={{ '--i': 1 } as React.CSSProperties}>{L(lang, 'Rehearse other worlds on this one.', 'Репетиция других миров — на этом.')}</h2>
+      {mars && <div className={`hm-hero-plate hm-hero-plate-mars ${destination === 'mars' ? 'is-active' : ''}`} aria-hidden="true">
+        <Clip base="media/cinematic/mars/s5-jezero" active={destination === 'mars'} />
+      </div>}
+      <div className="hm-hero-shade" aria-hidden="true" />
+      <div className="hm-hero-grid">
+        <div className="hm-hero-copy">
+          <p className="eg-eyebrow hm-rise" style={{ '--d': '120ms' } as React.CSSProperties}>{L(lang, 'Egiz — analogue campaign designer', 'Egiz — проектировщик аналоговых кампаний')}</p>
+          <h1 id="hm-title" className="eg-display hm-hero-title">
+            <span className="hm-line"><span style={{ '--d': '220ms' } as React.CSSProperties}>{L(lang, 'Rehearse', 'Репетиция')}</span></span>
+            <span className="hm-line"><span key={destination} className="hm-swap" style={{ '--d': '320ms' } as React.CSSProperties}>{destination === 'mars' ? L(lang, 'Mars', 'Марса') : L(lang, 'the Moon', 'Луны')}</span></span>
+            <span className="hm-line"><span style={{ '--d': '420ms' } as React.CSSProperties}>{L(lang, 'on Earth', 'на Земле')}</span></span>
+          </h1>
+          <p className="hm-hero-lede hm-rise" style={{ '--d': '600ms' } as React.CSSProperties}>{L(lang,
+            'Egiz finds the smallest set of places on Earth that can rehearse a mission — and states, plainly, what Earth can never test.',
+            'Egiz находит минимальный набор мест на Земле, где можно отрепетировать миссию, — и честно показывает, что Земля проверить не может.')}</p>
+          {currentTarget && <p className="hm-hero-coord hm-rise" style={{ '--d': '760ms' } as React.CSSProperties}><span>{currentTarget.name.split(/[/,]/)[0].trim()}</span>{latLon(lang, currentTarget.lat, currentTarget.lon)}</p>}
         </div>
-        <div className="lx-cards">
-          {cards.map((c, i) => <article key={c.id} id={c.id} className={`lx-card ${studioStep === i ? 'is-active' : ''} ${studioStep > i ? 'is-past' : ''}`} style={{ '--i': i } as React.CSSProperties}>
-            <span className="lx-card-n">{c.n}</span>
-            <h3>{L(lang, c.en, c.ru)}</h3>
-            <p>{c.sub}</p>
-            {c.metric && <p className="lx-metric"><b><Counter value={c.metric.v} suffix={c.metric.s} lang={lang} /></b><span>{c.metric.label}</span></p>}
-          </article>)}
-        </div>
+
+        <aside className="hm-panel hm-rise" style={{ '--d': '520ms' } as React.CSSProperties} aria-label={L(lang, 'New mission', 'Новая миссия')}>
+          <p className="hm-panel-kicker">{L(lang, 'New mission', 'Новая миссия')}</p>
+
+          <div className="hm-dest" role="radiogroup" aria-label={L(lang, 'Destination', 'Цель')}>
+            {([['moon', moon, L(lang, 'Moon', 'Луна')], ['mars', mars, L(lang, 'Mars', 'Марс')]] as const).filter(([, t]) => t).map(([body, , label]) => <button key={body} role="radio" aria-checked={destination === body} onClick={() => setDestination(body)}>{label}</button>)}
+          </div>
+
+          <p className="hm-panel-label">{L(lang, 'Expedition', 'Экспедиция')}</p>
+          <div className="hm-exp-list" role="radiogroup" aria-label={L(lang, 'Expedition', 'Экспедиция')}>
+            {EXPEDITIONS.map(exp => <button key={exp.mode} role="radio" aria-checked={mode === exp.mode} onClick={() => chooseMode(exp.mode)}>
+              <MissionGlyph mode={exp.mode} />
+              <span className="hm-exp-title">{L(lang, exp.en, exp.ru)}</span>
+            </button>)}
+          </div>
+
+          <p className="hm-panel-label">{L(lang, 'Parameters', 'Параметры')}</p>
+          <div className="hm-params">
+            {PARAMS[mode].map(p => {
+              const max = paramMax(p, params);
+              const value = paramValue(p, params);
+              return <label key={p.key} className="hm-param">
+                <span className="hm-param-head"><span>{L(lang, p.en, p.ru)}</span><output>{value.toLocaleString(lang)}<small>{p.unit}</small></output></span>
+                <input type="range" min={p.min} max={max} step={p.step} value={value} onChange={e => setParams(v => ({ ...v, [p.key]: Number(e.target.value) }))} style={{ '--fill': `${((value - p.min) / (max - p.min)) * 100}%` } as React.CSSProperties} />
+              </label>;
+            })}
+          </div>
+
+          <button className="eg-button hm-launch-button" onClick={() => startExpedition(true)}>{L(lang, 'Start simulation', 'Запустить моделирование')}<ArrowRight size={16} strokeWidth={1.6} /></button>
+          <button className="hm-panel-link" onClick={() => startExpedition(false)}>{L(lang, 'Open the lab without running', 'Открыть лабораторию без запуска')}</button>
+        </aside>
       </div>
+      <a className="hm-scroll" href="#hm-thesis" aria-label={L(lang, 'Scroll to story', 'Прокрутить вниз')}><span /></a>
     </section>
 
-    {/* ---------- one ground, two planets ---------- */}
-    <MatchChapter data={data} lang={lang} synthetic={synthetic} films={films.filter(f => f.mode === 'inline')} />
-
-    {/* ---------- what Earth cannot teach ---------- */}
-    {gaps.length > 0 && <section className="lx-limits" data-nav="0.09 0.3 0.45 0" data-nav-m="0.84 0.13 0.42 0" data-nav-look="lx-limits-rows">
-      <p className="lx-eyebrow lx-in">{L(lang, 'The limits', 'Пределы')}</p>
-      <h2 className="lx-h lx-in" style={{ '--i': 1 } as React.CSSProperties}>{L(lang, 'What Earth cannot teach.', 'Чему Земля не научит.')}</h2>
-      <div id="lx-limits-rows" className="lx-rows lx-in" style={{ '--i': 2 } as React.CSSProperties}>
-        {[0, 1].map(row => <div key={row} className={`lx-row ${row ? 'is-rev' : ''}`}><div className="lx-track">
-          {[...gaps, ...gaps, ...gaps].map((g, i) => <span key={i} className={`lx-chip ${row ? 'is-alt' : ''}`} aria-hidden={i >= gaps.length}>{tr(row ? g.alternative : g.gap)}</span>)}
-        </div></div>)}
+    {/* 02 — Thesis */}
+    <section id="hm-thesis" className="hm-thesis hm-wrap">
+      <p className="eg-eyebrow" data-reveal>{L(lang, '01 / The problem', '01 / Задача')}</p>
+      <h2 className="hm-statement" data-reveal>{L(lang,
+        'Every crew that leaves Earth trains on it first. The hard question is where — and what that rehearsal can never prove.',
+        'Каждый экипаж, покидающий Землю, сначала тренируется на ней. Сложный вопрос — где именно, и что такая репетиция никогда не докажет.')}</h2>
+      <div className="hm-thesis-cols">
+        <p data-reveal>{L(lang,
+          `Egiz scores ${tiles.toLocaleString(lang)} candidate Earth sites against a mission's objectives on NASA-defined baselines, then searches for the smallest campaign — one, two or three sites — that covers the most.`,
+          `Egiz оценивает ${tiles.toLocaleString(lang)} земных площадок-кандидатов по целям миссии на базовых линиях NASA и ищет минимальную кампанию — одну, две или три площадки, — которая покрывает больше всего.`)}</p>
+        <p data-reveal>{L(lang,
+          'Whatever no site on Earth can reproduce is written into a gap ledger, with the laboratory alternative that can.',
+          'Всё, что не может воспроизвести ни одна площадка на Земле, вносится в реестр пробелов — вместе с лабораторной альтернативой.')}</p>
       </div>
-      <p className="lx-note lx-in" style={{ '--i': 3 } as React.CSSProperties}>{L(lang, 'Above: what no field site reproduces. Below: the facility that can.', 'Сверху — чего не воспроизведёт ни один полигон. Снизу — установка, которая сможет.')}</p>
+      {synthetic && <p className="hm-note" data-reveal>{L(lang, 'Showing synthetic demo data — not NASA observations.', 'Показаны синтетические демо-данные — не наблюдения NASA.')}</p>}
+    </section>
+
+    {/* Film — the stand-in: the same light on another world */}
+    <section className="hm-plate hm-plate-film" aria-labelledby="hm-twin">
+      <div className="hm-plate-media" aria-hidden="true"><Clip base="media/cinematic/earth/s2-twin" parallax="60" /></div>
+      <div className="hm-plate-copy hm-wrap">
+        <p className="eg-eyebrow" data-reveal>{L(lang, 'The stand-in', 'Двойник')}</p>
+        <h2 id="hm-twin" className="eg-display hm-h2" data-reveal>{L(lang, 'Same light. Another world.', 'Тот же свет. Другой мир.')}</h2>
+        <p className="hm-body" data-reveal>{L(lang, 'The lunar plain turns into a desert salt pan. Crews rehearse here before they ever leave Earth.', 'Лунная равнина превращается в солончак пустыни. Здесь экипажи репетируют, прежде чем покинуть Землю.')}</p>
+      </div>
+      <span className="hm-veo" aria-hidden="true">{L(lang, 'Illustrative film · Veo', 'Иллюстрация · Veo')}</span>
+    </section>
+
+    {/* 03 — Moon target, measured */}
+    {moon && <section className="hm-target hm-wrap" aria-labelledby="hm-moon">
+      <figure className="hm-target-figure" data-reveal>
+        <div className="hm-target-image">
+          <img src={asset('hero/mons-mouton-hillshade-1600.jpg')} srcSet={`${asset('hero/mons-mouton-hillshade-800.jpg')} 800w, ${asset('hero/mons-mouton-hillshade-1600.jpg')} 1600w`} sizes="(max-width: 900px) 100vw, 50vw" width={1600} height={1600} alt={L(lang, 'Hillshade of the measured Mons Mouton terrain, 4 by 4 kilometres, lit by a low sun.', 'Теневая отмывка измеренного рельефа Монс-Мутон, 4 на 4 километра, при низком Солнце.')} loading="lazy" decoding="async" />
+          <span className="hm-scale" aria-hidden="true"><i />1 km</span>
+        </div>
+        <figcaption className="eg-eyebrow">{L(lang, 'Measured, not illustrated — PGDA LOLA terrain, 10 m posts, 4 × 4 km', 'Измерено, а не нарисовано — рельеф PGDA LOLA, шаг 10 м, 4 × 4 км')}</figcaption>
+      </figure>
+      <div className="hm-target-copy">
+        <p className="eg-eyebrow" data-reveal>{L(lang, '02 / Destination — Moon', '02 / Цель — Луна')}</p>
+        <h2 id="hm-moon" className="eg-display hm-h2" data-reveal>Mons Mouton</h2>
+        <p className="hm-body" data-reveal>{L(lang,
+          'A mountain near the lunar south pole and a candidate Artemis region. The Sun never rises more than a few degrees; shadows run for kilometres.',
+          'Гора у южного полюса Луны и район-кандидат программы Artemis. Солнце не поднимается выше нескольких градусов, тени тянутся на километры.')}</p>
+        <dl className="hm-specs" data-reveal>
+          <Spec label={L(lang, 'Position', 'Координаты')}>{latLon(lang, moon.lat, moon.lon)}</Spec>
+          <Spec label={L(lang, 'Terrain', 'Рельеф')}>{moon.dem_product}</Spec>
+          <Spec label={L(lang, 'Fine baseline', 'Малая база')}>{moon.fine_baseline_m} m</Spec>
+          {moon.h_max_deg != null && <Spec label={L(lang, 'Max sun elevation', 'Макс. высота Солнца')}>{moon.h_max_deg.toFixed(1)}°</Spec>}
+          {templateFor(moon) && <Spec label={L(lang, 'Objectives', 'Цели')}>{templateFor(moon)!.objectives.length}</Spec>}
+        </dl>
+        <button className="eg-button" data-reveal onClick={() => open('lab', moon)}>{L(lang, 'Explore the terrain', 'Изучить рельеф')}<ArrowRight size={16} strokeWidth={1.6} /></button>
+      </div>
     </section>}
 
-    {/* ---------- your mission ---------- */}
-    <section id="lx-mission" className="lx-mission" data-nav="0.17 0.62 1.05 1" data-nav-m="0.86 0.14 0.42 0" data-nav-look="lx-go">
-      <div className="lx-mission-bg" aria-hidden="true" style={{ backgroundImage: `url(${import.meta.env.BASE_URL}media/cinematic/hero/s1-arrival-end.jpg)` }} />
-      <div className="lx-mission-copy">
-        <p className="lx-eyebrow lx-in">{L(lang, 'Your mission', 'Ваша миссия')}</p>
-        <h2 className="lx-h lx-in" style={{ '--i': 1 } as React.CSSProperties}>{L(lang, 'Choose. Set. Fly it.', 'Выберите. Настройте. Запустите.')}</h2>
+    {/* 04 — Mars target, full bleed */}
+    {mars && <section className="hm-plate hm-plate-mars" aria-labelledby="hm-mars">
+      <div className="hm-plate-media" aria-hidden="true">
+        <Clip base="media/cinematic/transitions/s4-passage" parallax="90" />
       </div>
-      <div className="lx-panel lx-in" style={{ '--i': 2 } as React.CSSProperties} role="group" aria-label={L(lang, 'Plan a mission', 'Планирование миссии')}>
-        <div className="lx-seg" role="radiogroup" aria-label={L(lang, 'Destination', 'Цель')}>
-          {([['moon', moon, L(lang, 'Moon', 'Луна')], ['mars', mars, L(lang, 'Mars', 'Марс')]] as const).filter(([, t]) => t).map(([b, t, label]) => <button key={b} role="radio" aria-checked={destination === b} onClick={() => setDestination(b)}>
-            <span>{label}</span><small>{t ? shortName(t.name) : ''}</small>
-          </button>)}
+      <div className="hm-plate-copy hm-wrap">
+        <p className="eg-eyebrow" data-reveal>{L(lang, '03 / Destination — Mars', '03 / Цель — Марс')}</p>
+        <h2 id="hm-mars" className="eg-display hm-h2 hm-h2-xl" data-reveal>{L(lang, 'Jezero', 'Езеро')}</h2>
+        <p className="hm-body" data-reveal>{L(lang,
+          'An ancient lake delta and the Perseverance landing site — the reference for rover routes, field geology and sample work.',
+          'Древняя дельта озера и место посадки Perseverance — эталон для маршрутов ровера, полевой геологии и работы с образцами.')}</p>
+        <dl className="hm-specs hm-specs-row" data-reveal>
+          <Spec label={L(lang, 'Position', 'Координаты')}>{latLon(lang, mars.lat, mars.lon)}</Spec>
+          <Spec label={L(lang, 'Terrain', 'Рельеф')}>{mars.dem_product}</Spec>
+          <Spec label={L(lang, 'Fine baseline', 'Малая база')}>{mars.fine_baseline_m} m</Spec>
+        </dl>
+        <button className="eg-button" data-reveal onClick={() => open('campaign', mars)}>{L(lang, 'Plan a Mars campaign', 'Спланировать кампанию')}<ArrowRight size={16} strokeWidth={1.6} /></button>
+      </div>
+    </section>}
+
+    {/* Film — Mars becomes its Earth twin */}
+    {mars && <section className="hm-plate hm-plate-film" aria-labelledby="hm-mars-twin">
+      <div className="hm-plate-media" aria-hidden="true"><Clip base="media/cinematic/missions/s6-answer" parallax="60" /></div>
+      <div className="hm-plate-copy hm-wrap">
+        <p className="eg-eyebrow" data-reveal>{L(lang, 'The twin of Mars', 'Двойник Марса')}</p>
+        <h2 id="hm-mars-twin" className="eg-display hm-h2" data-reveal>{L(lang, 'Mars has one too.', 'У Марса он тоже есть.')}</h2>
+        {marsTwinName && <p className="hm-body" data-reveal>{L(lang, `The closest ground to Jezero on Earth: ${marsTwinName}.`, `Самый близкий к Езеро грунт на Земле — ${marsTwinName}.`)}</p>}
+      </div>
+      <span className="hm-veo" aria-hidden="true">{L(lang, 'Illustrative film · Veo', 'Иллюстрация · Veo')}</span>
+    </section>}
+
+    {/* 05 — Method & the live result */}
+    <section className="hm-method hm-wrap" aria-labelledby="hm-method">
+      <div className="hm-method-head">
+        <p className="eg-eyebrow" data-reveal>{L(lang, '04 / Method', '04 / Метод')}</p>
+        <h2 id="hm-method" className="eg-display hm-h2" data-reveal>{L(lang, 'Constrain. Compute. Confess.', 'Ограничить. Рассчитать. Признать.')}</h2>
+      </div>
+      <ol className="hm-steps">
+        <li data-reveal><span className="hm-step-n">01</span><h3>{L(lang, 'Constrain', 'Ограничить')}</h3><p>{L(lang, 'Pick a mission template. Each objective names the terrain, light and thermal conditions it needs, on a fine and a 2 km baseline.', 'Выберите шаблон миссии. Каждая цель задаёт нужный рельеф, освещение и температуру — на малой базе и на базе 2 км.')}</p></li>
+        <li data-reveal><span className="hm-step-n">02</span><h3>{L(lang, 'Compute', 'Рассчитать')}</h3><p>{L(lang, `Score ${tiles.toLocaleString(lang)} Earth tiles, then search exactly for the k = 1–3 site campaign with the highest coverage.`, `Оценить ${tiles.toLocaleString(lang)} земных участков и точно найти кампанию из k = 1–3 площадок с наибольшим покрытием.`)}</p></li>
+        <li data-reveal><span className="hm-step-n">03</span><h3>{L(lang, 'Confess', 'Признать')}</h3><p>{L(lang, 'Report the ceiling Earth can reach for each objective, and list every condition that has to move to a lab.', 'Показать предел, которого Земля достигает по каждой цели, и перечислить всё, что придётся перенести в лабораторию.')}</p></li>
+      </ol>
+      <div className="hm-results">
+        {[{ t: moon, c: moonCampaign }, { t: mars, c: marsCampaign }].filter(x => x.t && x.c).map(({ t, c }) => <article key={t!.id} className="hm-result" data-reveal>
+          <header><p className="eg-eyebrow">{t!.body === 'moon' ? L(lang, 'Moon base', 'База на Луне') : L(lang, 'Mars surface', 'Поверхность Марса')} · k = {c!.k}</p><h3>{t!.name.split(/[/,]/)[0].trim()}</h3></header>
+          <p className="hm-result-figure"><span className="eg-display">{pct(c!.coverage)}</span><span className="hm-result-unit">%<br />{L(lang, 'coverage', 'покрытие')}</span></p>
+          <div className="hm-bar" aria-hidden="true"><i style={{ '--w': c!.coverage } as React.CSSProperties} /></div>
+          <ul className="hm-sites">{c!.sites.map(s => <li key={s.id}>{tr(siteName(data, s.id))}</li>)}</ul>
+        </article>)}
+      </div>
+      <p className="hm-footnote" data-reveal>{L(lang,
+        `Results from the ${synthetic ? 'synthetic demo' : 'measured-terrain pilot'} dataset, engine ${data.results.engine_version}. Exploratory and unvalidated — the low lunar coverage is the finding, not an error.`,
+        `Результаты набора данных «${synthetic ? 'синтетическое демо' : 'пилот на измеренном рельефе'}», движок ${data.results.engine_version}. Предварительно и без валидации — низкое покрытие для Луны и есть вывод, а не ошибка.`)}</p>
+    </section>
+
+    {/* 06 — What Earth cannot test */}
+    {gapRows.length > 0 && <section className="hm-gaps hm-wrap" aria-labelledby="hm-gaps">
+      <div className="hm-gaps-head">
+        <p className="eg-eyebrow" data-reveal>{L(lang, '05 / Gap ledger', '05 / Реестр пробелов')}</p>
+        <h2 id="hm-gaps" className="eg-display hm-h2" data-reveal>{L(lang, 'What Earth cannot test', 'Что Земля не может проверить')}</h2>
+        <p className="hm-body" data-reveal>{L(lang, 'No analogue site closes these gaps. Egiz names each one and the facility that can.', 'Ни одна аналоговая площадка не закрывает эти пробелы. Egiz называет каждый — и установку, которая может.')}</p>
+      </div>
+      <ol className="hm-ledger">
+        {gapRows.map((g, i) => <li key={g.gap} data-reveal>
+          <span className="hm-ledger-n">{String(i + 1).padStart(2, '0')}</span>
+          <strong>{tr(g.gap)}</strong>
+          <span className="hm-ledger-alt">{tr(g.alternative)}</span>
+        </li>)}
+      </ol>
+    </section>}
+
+    {/* 07 — Earth */}
+    <section className="hm-plate hm-plate-earth" aria-labelledby="hm-earth">
+      <div className="hm-plate-media" aria-hidden="true">
+        <Clip base="media/cinematic/orbital/s7-home" parallax="-70" />
+      </div>
+      <div className="hm-plate-copy hm-plate-copy-top hm-wrap">
+        <p className="eg-eyebrow" data-reveal>{L(lang, '06 / Built in Astana', '06 / Сделано в Астане')}</p>
+        <h2 id="hm-earth" className="eg-display hm-h2 hm-h2-xl" data-reveal>{L(lang, <>Earth,<br />before elsewhere</>, <>Сначала Земля.<br />Затем космос</>)}</h2>
+        <div className="hm-actions" data-reveal>
+          <button className="eg-button" onClick={() => open('campaign')}>{L(lang, 'Design a campaign', 'Создать кампанию')}<ArrowRight size={16} strokeWidth={1.6} /></button>
         </div>
-        <div className="lx-modes" role="radiogroup" aria-label={L(lang, 'Mission type', 'Тип миссии')}>
-          {MODES.map(m => <button key={m.mode} role="radio" aria-checked={mode === m.mode} onClick={() => { setMode(m.mode); setParams(defaultsFor(m.mode)); }}>
-            <MissionGlyph mode={m.mode} /><span>{L(lang, m.en, m.ru)}</span>
-          </button>)}
-        </div>
-        <div className="lx-params">
-          {PARAMS[mode].map(p => { const max = paramMax(p, params), v = paramValue(p, params); return <label key={p.key} className="lx-param">
-            <span><em>{L(lang, p.en, p.ru)}</em><output>{v.toLocaleString(lang)}<small> {p.unit}</small></output></span>
-            <input type="range" min={p.min} max={max} step={p.step} value={v} onChange={e => setParams(s => ({ ...s, [p.key]: Number(e.target.value) }))} style={{ '--fill': `${((v - p.min) / (max - p.min)) * 100}%` } as React.CSSProperties} />
-          </label>; })}
-        </div>
-        <button id="lx-go" className="lx-go lx-mag" onClick={() => launch(true)}><span>{L(lang, 'Run the simulation', 'Запустить расчёт')}</span><ArrowRight size={18} /></button>
-        <button className="lx-quiet" onClick={() => launch(false)}>{L(lang, 'Open the lab without running', 'Открыть лабораторию без запуска')}</button>
       </div>
     </section>
 
-    {/* ---------- finale: home ---------- */}
-    {finale && <ScrubScene clip={finale} lang={lang} nav="0.3 0.28 0.5 0" kicker={L(lang, 'Made in Astana', 'Сделано в Астане')} title={L(lang, 'Earth first.\nThen everything else.', 'Сначала — Земля.\nПотом — всё остальное.')} />}
+    {/* 08 — Index of workspaces */}
+    <section className="hm-index hm-wrap" aria-labelledby="hm-index">
+      <div className="hm-index-head">
+        <p className="eg-eyebrow" data-reveal>{L(lang, '07 / Workspaces', '07 / Разделы')}</p>
+        <h2 id="hm-index" className="eg-display hm-h2" data-reveal>{L(lang, 'The instrument', 'Инструмент')}</h2>
+      </div>
+      <ul className="hm-index-list">
+        {tools.map((tool, i) => <li key={tool.route} data-reveal>
+          <button onClick={() => open(tool.route)}>
+            <span className="hm-index-n">{String(i + 1).padStart(2, '0')}</span>
+            <span className="hm-index-title">{L(lang, tool.title, tool.ru)}</span>
+            <span className="hm-index-text">{L(lang, tool.text, tool.textRu)}</span>
+            <ArrowUpRight className="hm-index-arrow" size={22} strokeWidth={1.4} aria-hidden="true" />
+          </button>
+        </li>)}
+      </ul>
+    </section>
 
-    {/* ---------- footer ---------- */}
-    <footer className="lx-foot" data-nav="0.84 0.42 0.75 1">
-      <div className="lx-foot-card lx-in">
-        <div className="lx-foot-mark" aria-hidden="true">EGIZ</div>
-        <div className="lx-foot-grid">
-          <div>
-            <p className="lx-eyebrow">{L(lang, 'Tools', 'Инструменты')}</p>
-            <div className="lx-foot-pills">{routes.map(r => <button key={r} className="lx-pill lx-ghost" onClick={() => open(r)}>{navLabel(r)}</button>)}</div>
-          </div>
-          <div className="lx-foot-fine">
-            <p>{L(lang, 'An independent student project for the NASA Space Apps Challenge 2026. Not affiliated with or endorsed by NASA.', 'Независимый студенческий проект для NASA Space Apps Challenge 2026. Не связан с NASA и не одобрен ею.')}</p>
-            <p>{L(lang, 'The films are illustrative, generated with Veo. Terrain figures come from NASA PGDA lunar altimetry, a measured Jezero package and Copernicus DEM. The Navigator is a 3D rendering of the EGIZ mark.', 'Фильмы — иллюстрация, созданная в Veo. Цифры рельефа — из лунной альтиметрии NASA PGDA, измеренного пакета Езеро и Copernicus DEM. Навигатор — 3D-образ знака EGIZ.')}{synthetic ? L(lang, ' Some figures use demo data.', ' Часть цифр — демо-данные.') : ''}</p>
-            <p className="lx-foot-meta"><span>© 2026 EGIZ</span><button className="lx-pill lx-ghost" onClick={() => open('evidence')}>{L(lang, 'Sources & limits', 'Источники и пределы')}<ArrowUpRight size={14} /></button></p>
-          </div>
-        </div>
+    <footer className="hm-footer hm-wrap">
+      <div className="hm-footer-mark eg-display" aria-hidden="true">Egiz</div>
+      <div className="hm-footer-cols">
+        <p>{L(lang, 'Independent student project for NASA Space Apps Challenge 2026. Not affiliated with or endorsed by NASA.', 'Независимый студенческий проект для NASA Space Apps Challenge 2026. Не связан с NASA и не одобрен NASA.')}</p>
+        <p>{L(lang, 'Planet plates rendered from Solar System Scope global mosaics (CC BY 4.0) based on NASA imagery; terrain from NASA PGDA. Visual context only — never solver input.', 'Изображения планет построены по глобальным мозаикам Solar System Scope (CC BY 4.0) на основе снимков NASA; рельеф — NASA PGDA. Только визуальный контекст, не входные данные расчёта.')}</p>
+        <p className="hm-footer-meta"><span>© 2026 Egiz</span><button className="eg-button quiet" onClick={() => open('evidence')}><span>{L(lang, 'Sources & limits', 'Источники и ограничения')}</span></button></p>
       </div>
     </footer>
   </main>;
