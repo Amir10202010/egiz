@@ -248,6 +248,9 @@ export class WorldEngine {
   setLaunch(l: LaunchState | null) { this.launch = l; }
   setGapFocus(i: number) { this.gapFocus = i; }
   setLabels(l: LabelSpec[]) { this.labels = l; }
+  private occluded = false;
+  /** True while something opaque covers the whole canvas. */
+  setOccluded(v: boolean) { this.occluded = v; }
   get weights() { return this.w; }
   /** How much of each kind of air the current shot is in, for the soundscape. */
   get mix() { const k = 1 - this.spaceMix; return { vacuum: this.w[0] * k + this.spaceMix, mars: this.w[1] * k, earth: (this.w[2] + this.w[3]) * k }; }
@@ -422,9 +425,13 @@ export class WorldEngine {
     // airless ground blooms less: in vacuum there is no haze to carry the glow, so the sky stays black
     this.bloom.strength = mix(.1 + .14 * (earthAir + marsAir), .4, s.space);
 
+    // a film plate or an opaque chapter covers the whole screen: keep the clock running, skip the GPU work.
     // Reduced motion: the scene is static between inputs, so draw only when the view or the inputs change.
-    const sig = this.reduced ? [this.chapter.toFixed(4), pt.x.toFixed(3), pt.y.toFixed(3), pt.down, this.probe.r.toFixed(1), this.gapFocus, this.sunDrag.toFixed(3), inLaunch.toFixed(3), this.canvas.clientWidth, this.canvas.clientHeight].join('|') : '';
-    if (!this.reduced || sig !== this.lastSig) { this.composer.render(dt); this.lastSig = sig; }
+    if (this.occluded) this.lastSig = '';
+    else {
+      const sig = this.reduced ? [this.chapter.toFixed(4), pt.x.toFixed(3), pt.y.toFixed(3), pt.down, this.probe.r.toFixed(1), this.gapFocus, this.sunDrag.toFixed(3), inLaunch.toFixed(3), this.canvas.clientWidth, this.canvas.clientHeight].join('|') : '';
+      if (!this.reduced || sig !== this.lastSig) { this.composer.render(dt); this.lastSig = sig; }
+    }
     this.updateLabels();
     this.onFrame?.(this.chapter);
   };
