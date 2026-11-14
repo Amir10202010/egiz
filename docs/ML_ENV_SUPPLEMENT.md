@@ -60,4 +60,16 @@ Source search, 14 November 2026. No values were taken; nothing below is a number
 - Mars, Jezero: MEDA TIRS ground temperature. The candidate sources are Martínez et al. 2023, JGR Planets (surface energy budget, albedo and thermal inertia at Jezero), and Martínez et al. 2025, EPSC-DPS2025-1461, doi:10.5194/epsc-dps2025-1461 (data through sol 1450). In the abstract, daily min and max are only shown in Fig. 3a, so the values should come from the PDS MEDA archive or the paper text, not from reading the figure.
 - Definition to match the Earth side: for `t_min_c`, use a low percentile of the night or annual minimum surface temperature; for `t_max_c`, use a high percentile of the daytime maximum. Record the `_lo`/`_hi` bounds with the source key.
 
+### Jezero proposal from MEDA (14 November 2026)
+
+`tools/acquire_meda_ground_temp.py` → `data/env/target-climate-0.1.0/mars_jezero_meda.json`. This is a **proposal** and is not written to `data/curated/targets.csv`.
+
+- Source: Mars 2020 MEDA calibrated TIRS `GROUND_TEMP` (ground brightness temperature) from the PDS Atmospheres node. Citation: Rodriguez-Manfredi et al. (2021), MEDA, NASA PDS, doi:10.17189/1522849.
+- Sample: every 20th sol over one Mars year (sols 21–661), 33 sols. Sol 1 was skipped because its window is only 90 s. Rows are dropped when the wheel is in the field of view, tilt is ≥ 20°, the footprint is in rover shadow, or the rover is moving. The download is about 170 MB, cached outside the repository.
+- Result: `t_min_c` = −88.4 °C (P5 of daily minima; sample range −93.5 to −81.8), `t_max_c` = +17.6 °C (P95 of daily maxima; range 0.0 to 18.3).
+- Caveats: MEDA does not sample every hour, so a daily minimum can miss the true pre-dawn minimum. The values are brightness temperatures, not kinetic temperatures. The footprint moves along the traverse.
+- In-memory preview only (not committed and not in `targets.csv`): with these values, M4 becomes computable for 283 AOIs. The top AOIs are central Asian deserts, with F ≈ 0.40 at the top. SM_E095.613_N39.631 has `t_min_c` −22 °C, fidelity 0.09. No Earth AOI is close to −88 °C, so `t_min_c` limits F everywhere.
+
+Moon: the Diviner Polar Resource Product (`dlre_prp_south.tab`, LRO-L-DLRE-5-PRP-V2.0, 605 MB) has only the annual **maximum** surface temperature and the annual **average** at 2 cm depth, with **no minimum**. A lunar `t_min_c` therefore needs either the Diviner polar cumulative products (`data_derived_pcp/`, not yet examined) or a published value.
+
 Note for the Moon: polar lunar night temperatures are far below anything on Earth's surface, so with τ = 30 °C an absolute `colder` comparison will be ≈ 0 for every Earth AOI. The science lead should decide whether lunar cold is treated as a physical gap (like vacuum) or ranked relatively.
