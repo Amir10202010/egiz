@@ -59,10 +59,13 @@ def _float_or_none(text: str | None) -> float | None:
     return value
 
 
-def _validate_schema(data: dict, schema_path: Path) -> None:
+def _validate_schema(data: dict, schema_path: Path, *, extra_pools: tuple[str, ...] = ()) -> None:
     import jsonschema
 
     schema = json.loads(schema_path.read_text(encoding="utf-8"))
+    if extra_pools:  # consumer-side, in-memory only: the contract file is not changed
+        pool = schema["properties"]["aois"]["items"]["properties"]["pool"]
+        pool["enum"] = list(pool["enum"]) + list(extra_pools)
     try:
         jsonschema.Draft202012Validator(schema).validate(data)
     except jsonschema.ValidationError as error:
@@ -114,11 +117,15 @@ def _load_env(env_dir: Path, catalog_sha: str, files: dict) -> tuple[dict[str, d
 
 def load_geo_snapshot(geo_dir: str | Path, base_dir: str | Path = ROOT / "data" / "pilot", *,
                       ids: list[str] | None = None, limit: int | None = None,
-                      env_dir: str | Path | None = None) -> Snapshot:
+                      env_dir: str | Path | None = None, reference: bool = False) -> Snapshot:
     """Validated snapshot with Earth candidates from a geospatial release.
 
     ``env_dir`` optionally supplies spec-defined ``t_min_c``/``t_max_c`` (MODIS
     LST) and ``precip_mm`` (GPM IMERG) per AOI, bound to this release's catalog.
+
+    ``reference=True`` loads a reference-AOI set built with the same geo code
+    (``tools/build_reference_aois.py``): the only relaxation is that pool
+    ``reference`` is accepted, which the geospatial contract does not list yet.
     """
     geo_dir, base_dir = Path(geo_dir), Path(base_dir)
     files: dict[str, dict[str, Any]] = {}
@@ -137,7 +144,8 @@ def load_geo_snapshot(geo_dir: str | Path, base_dir: str | Path = ROOT / "data" 
     sources_doc = json.loads(read("manifests/sources.json"))
     rows = list(csv.DictReader(io.StringIO(read("aoi_features.csv").decode("utf-8"))))
     schemas = ROOT / "contracts" / "geospatial"
-    _validate_schema(catalog, schemas / "aoi_catalog.schema.json")
+    _validate_schema(catalog, schemas / "aoi_catalog.schema.json",
+                     extra_pools=("reference",) if reference else ())
     _validate_schema(columns_doc, schemas / "aoi_features_columns.schema.json")
 
     versions = {doc.get("dataset_version") for doc in (catalog, columns_doc, sources_doc)}

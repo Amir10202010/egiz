@@ -30,6 +30,17 @@ This adopts experiment E3 of `docs/science/VALIDATION_PROTOCOL.md` (hypothesis H
 
 Each testable pair with sourced coordinates gets a reference AOI: a 22 km window centred on the stated coordinates. It is built with the geo release code path (`pipeline/geodata`, branch `geo/data-foundation` at 234ae86, the same code as geo-0.1.0) and the env supplement method. Coordinates are used as stated. They are **not** moved after results are seen. A reference AOI is ranked among the eligible geo-0.1.0 Earth candidates for its objective, and the other reference AOIs are not in that pool.
 
+**Built (attributes only, no scores):**
+- `data/ml/reference/ref-aois-0.1.0/`, by `tools/build_reference_aois.py`: 25 AOIs, all stages ok except McMurdo land cover (ESA WorldCover does not cover latitudes below 60° S, so quality fails and the AOI is skipped; it is not in P1).
+- `data/ml/reference/ref-env-0.1.0/`, by `tools/acquire_env_supplement.py`: MODIS LST and IMERG for all 25, no missing values.
+
+Fixed definitions (implemented in `pipeline/ml/evaluate.py`):
+- `pct` = 100 × (n_better + 0.5 × n_tied) / n_eligible_pool.
+- A reference AOI with null F (it fails a constraint, or too much weight is missing) gets **pct = 100** and is flagged; it is not dropped.
+- **Overlap rule:** for each pair, pool AOIs whose centre is closer than 31.2 km (22 km × √2) to the reference centre are removed. Example: the pilot window `PR_JETT_SP_CRATER` is removed when ranking `RF_JETT_SP_CRATER`.
+- Baselines keep the objective's constraints, so they rank the same eligible set. Dryness-only uses the O5 parameters (`precip_mm` at_most a = 50, τ = 100; `bare_frac` at_least a = 0.8, τ = 0.2).
+- S3 stability uses the Stage 1 perturbation config (200 draws, seed 2026).
+
 ## 4. Analyses
 
 | | Pairs | Ranking |
@@ -59,11 +70,12 @@ Learned components evaluated later (encoder, novelty, learned ranking) use this 
 
 ## 6. Freeze record
 
-| File | SHA-256 |
-| --- | --- |
-| `data/ml/reference/reference_sites-0.1.0.csv` | *(filled at freeze)* |
-| `data/ml/reference/sources-0.1.0.csv` | *(filled at freeze)* |
-| `docs/ML_PREREGISTRATION.md` (this file, minus this table) | *(filled at freeze)* |
+The freeze is the file `data/ml/reference/FREEZE.json`. It holds:
+- the SHA-256 of `reference_sites-0.1.0.csv`, `sources-0.1.0.csv` and this document;
+- the date;
+- `reviewed_by`.
+
+`python -m pipeline.ml evaluate` **refuses to run** (exit code 3, no output file) when that file is absent, when a hash differs, or when no reviewer is named. Tests rank only synthetic `FAKE_` tiles. Until the freeze, no real reference AOI is scored by any code path.
 
 Frozen on: *not yet*. Reviewed by: *science lead, pending*.
 
