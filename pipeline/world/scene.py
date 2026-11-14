@@ -96,8 +96,8 @@ def box_mean(values: np.ndarray, size: int) -> np.ndarray:
     return np.where(weight > 1 - 1e-9, total, np.nan).astype(np.float32)
 
 
-def quantize(heights: np.ndarray, offset: float) -> np.ndarray:
-    q = np.round((heights - offset) / HEIGHT_SCALE)
+def quantize(heights: np.ndarray, offset: float, scale: float = HEIGHT_SCALE) -> np.ndarray:
+    q = np.round((heights - offset) / scale)
     if np.nanmax(np.abs(q)) > 32767:
         raise ValueError("relief exceeds the int16 height encoding range")
     return np.where(np.isfinite(q), q, NODATA).astype("<i2")
@@ -160,7 +160,7 @@ def build_package(site: dict, dtm: np.ndarray, dtm_origin, ortho: np.ndarray | N
                 r0 = round((half + apron - north) / fine_post) - step
                 c0 = round((west + half + apron) / fine_post) - step
                 block = smooth[r0:r0 + (POSTS + 2) * step + 1:step, c0:c0 + (POSTS + 2) * step + 1:step]
-                payload = quantize(block, offset).tobytes()
+                payload = quantize(block, offset, site.get("height_scale", HEIGHT_SCALE)).tobytes()
                 key = f"{level}-{col}-{row}"
                 (folder / "h" / f"{key}.bin").write_bytes(payload)
                 tile = {"key": key, "level": level, "col": col, "row": row, "west": west, "north": north, "size": size,
@@ -184,9 +184,10 @@ def build_package(site: dict, dtm: np.ndarray, dtm_origin, ortho: np.ndarray | N
         "local_crs": local_proj(site),
         "local_axes": "x east, y north, metres from site origin; heights in metres above the source vertical datum",
         "extent": {"west": -half, "east": half, "south": -half, "north": half},
-        "encoding": {"posts": POSTS, "apron": 1, "side": POSTS + 3, "dtype": "int16-le", "scale_m": HEIGHT_SCALE,
+        "encoding": {"posts": POSTS, "apron": 1, "side": POSTS + 3, "dtype": "int16-le", "scale_m": site.get("height_scale", HEIGHT_SCALE),
                      "offset_m": offset, "nodata": NODATA, "image_px": IMAGE_PX if image is not None else None,
-                     "row_order": "north to south", "note": "0.02 m steps are serialization, not measurement precision"},
+                     "row_order": "north to south",
+                     "note": f"{site.get('height_scale', HEIGHT_SCALE)} m steps are serialization, not measurement precision"},
         "levels": [{"level": lv, "tiles_per_side": 2 ** lv, "tile_size_m": 2 * half / 2 ** lv,
                     "posting_m": 2 * half / 2 ** lv / POSTS,
                     "image_px_m": 2 * half / 2 ** lv / IMAGE_PX if image is not None else None,
@@ -222,7 +223,81 @@ def build(name: str) -> Path:
     return path
 
 
+# ----------------------------------------------------------------------------- Earth analog worlds
+
+EARTH_R = 6371008.8
+GLO30_PIXEL_M = 30.0
+
+
+def earth_site(window_id: str) -> dict:
+    """World site for an Earth window of the discovery index (or geo-0.1.0), on Copernicus GLO-30."""
+    from pipeline.discovery.fingerprint import load_windows
+    w = next((x for x in load_windows() if x.id == window_id and x.body == "earth"), None)
+    if w is None:
+        raise KeyError(f"{window_id} is not an Earth window of the discovery index")
+    return {
+        "id": f"EARTH_{window_id}", "name": f"Earth analog {w.name}", "body": "earth", "lat": round(w.lat, 6),
+        "lon": round(w.lon, 6), "radius_m": EARTH_R, "half_m": 8192.0, "levels": 3, "height_scale": 0.05,
+        "frame": "WGS84 geodetic lat/lon; local azimuthal equidistant on a 6371008.8 m sphere",
+        "dtm": {"product": "Copernicus DEM GLO-30 Public 2021 (digital surface model, 1 arcsec)",
+                "url": "https://registry.opendata.aws/copernicus-dem/",
+                "citation": "European Space Agency (2021) Copernicus Global Digital Elevation Model, doi:10.5270/ESA-c5d3d65",
+                "pixel_m": GLO30_PIXEL_M, "nodata_below": -1e30, "vertical_datum": "EGM2008 geoid (metres)",
+                "kind": "X-band InSAR surface model (includes vegetation and buildings)"},
+    }
+
+
+def build_earth(window_id: str) -> Path:
+    """Reproject the GLO-30 window onto the local AEQD grid at native posting, then tile it like Jezero.
+
+    No imagery is attached (no measured orthoimage is acquired for Earth windows).
+    """
+    from rasterio.warp import Resampling as WarpResampling
+    from rasterio.warp import reproject
+
+    from pipeline.geodata import RAW
+    from pipeline.geodata.rasters import (
+        copernicus_tiles,
+        dem_tile_urls,
+        geographic_bounds,
+        mosaic_window,
+    )
+    site = earth_site(window_id)
+    margin = 600.0
+    half = site["half_m"] + margin
+    bounds = geographic_bounds(site["lon"], site["lat"], half)
+    urls, _ = dem_tile_urls(bounds, copernicus_tiles(RAW))
+    z, transform, crs, info = mosaic_window(urls, bounds)
+    n = int(round(2 * half / GLO30_PIXEL_M))
+    local = np.full((n, n), np.nan, np.float32)
+    from rasterio.transform import from_origin
+    dst_t = from_origin(-half, half, GLO30_PIXEL_M, GLO30_PIXEL_M)
+    reproject(z, local, src_transform=transform, src_crs=crs, src_nodata=np.nan, dst_transform=dst_t,
+              dst_crs=local_proj(site), dst_nodata=np.nan, resampling=WarpResampling.bilinear)
+    site["source_crs"] = local_proj(site)
+    name = f"earth-{window_id.lower()}"
+    folder = ROOT / "data/world" / name
+    manifest = build_package(site, local, (-half, half), None, None, folder)
+    manifest["sources"] = {"dtm": {**{k: v for k, v in site["dtm"].items() if k != "nodata_below"},
+                                   "tiles": info["tiles"],
+                                   "window_sha256": hashlib.sha256(np.ascontiguousarray(z).tobytes()).hexdigest(),
+                                   "processing": "rasterio.merge of GLO-30 COG tiles, bilinear reprojection to the local "
+                                                 "AEQD grid at 30 m; no gap filling"}}
+    manifest["discovery_window"] = window_id
+    manifest["limitations"] = manifest["limitations"][:1] + [
+        "Copernicus GLO-30 is a surface model: canopy and buildings are part of the heights.",
+        "30 m posting: rover-scale obstacles are not resolved; no orthoimage is attached.",
+        "No mechanical soil property or mineralogy is contained in these products."]
+    (folder / "manifest.json").write_text(json.dumps(manifest, allow_nan=False, separators=(",", ":")) + "\n")
+    print(f"{name}: {len(manifest['tiles'])} tiles, offset {manifest['encoding']['offset_m']} m")
+    return folder / "manifest.json"
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("site", choices=sorted(SITES))
-    build(parser.parse_args().site)
+    parser.add_argument("site", help=f"one of {sorted(SITES)} or earth:<discovery window id>")
+    arg = parser.parse_args().site
+    if arg.startswith("earth:"):
+        build_earth(arg.split(":", 1)[1])
+    else:
+        build(arg)

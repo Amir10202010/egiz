@@ -60,3 +60,6 @@ web/public/terrain/
 # Generated copy of measured world tiles (source: data/world) and raw source windows
 web/public/world/
 .gstack/
+
+# Generated copy of the discovery bundle (source: data/discovery)
+web/public/discovery/

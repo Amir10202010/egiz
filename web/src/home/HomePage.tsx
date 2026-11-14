@@ -231,6 +231,7 @@ export function HomePage() {
   };
 
   const tools: { route: Route; title: string; ru: string; text: string; textRu: string }[] = [
+    { route: 'discover', title: 'Discover', ru: 'Поиск аналогов', text: 'Search the whole Earth for analogs of a lunar or Martian site, dimension by dimension, with uncertainty, rarity and the gaps that remain.', textRu: 'Поиск аналогов лунной или марсианской площадки по всей Земле — по каждому измерению, с неопределённостью, редкостью и оставшимися разрывами.' },
     { route: 'astral', title: 'Mission Studio', ru: 'Студия миссий', text: 'A measured 2 km Jezero world from HiRISE: terrain intelligence, route planning and rover rehearsal.', textRu: 'Измеренный мир Езеро 2 км по данным HiRISE: анализ рельефа, планирование маршрута и репетиция ровера.' },
     { route: 'studio', title: 'Lunar World', ru: 'Лунный мир', text: 'A measured 5 m Mons Mouton world with SPICE lighting, terrain intelligence and terramechanics traverses.', textRu: 'Измеренный мир Монс-Мутон с шагом 5 м: освещение SPICE, анализ рельефа и террамеханика ровера.' },
     { route: 'atlas', title: 'Transferability', ru: 'Переносимость', text: 'Per-task transferability of each measured Earth window, with separate evidence and mismatch axes.', textRu: 'Переносимость каждой задачи для каждого измеренного земного окна — с отдельными осями данных и расхождений.' },

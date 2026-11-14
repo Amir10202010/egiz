@@ -11,8 +11,8 @@ import pytest
 import rasterio
 from rasterio.transform import from_origin
 
-from pipeline.world import scene as world
 from pipeline.world import remote_tiff
+from pipeline.world import scene as world
 
 ROOT = Path(__file__).resolve().parents[1]
 PACKAGE = ROOT / "data/world/mars-jezero"

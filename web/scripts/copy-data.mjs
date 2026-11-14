@@ -96,6 +96,21 @@ export async function copyDatasets(root = path.resolve(path.dirname(fileURLToPat
     const source = path.join(root,'data',name);
     if ((await readdir(source).catch(()=>[])).length) await cp(source,path.join(root,'web/public',name),{recursive:true});
   }
+  // Discovery bundle (pipeline/discovery): compact index, per-target score shards and validation.
+  // The CSV index stays out of the browser; the bundle carries its checksum.
+  const discovery = path.join(root, 'data/discovery');
+  const discoveryOut = path.join(root, 'web/public/discovery');
+  await rm(discoveryOut, { recursive: true, force: true });
+  const bundleText = await readFile(path.join(discovery, 'discovery.json'), 'utf8').catch(() => null);
+  if (bundleText) {
+    const bundle = JSON.parse(bundleText);
+    if (bundle.schema !== 'egiz.discovery' || bundle.synthetic !== false) throw new Error('data/discovery/discovery.json is not a measured discovery bundle.');
+    await mkdir(path.join(discoveryOut, 'scores'), { recursive: true });
+    await writeFile(path.join(discoveryOut, 'discovery.json'), bundleText);
+    for (const t of bundle.targets) await copyFile(path.join(discovery, t.shard), path.join(discoveryOut, t.shard));
+    await copyFile(path.join(discovery, 'validation.json'), path.join(discoveryOut, 'validation.json')).catch(() => {});
+    console.log(`Egiz: packaged discovery bundle (${bundle.windows.id.length} windows, ${bundle.targets.length} targets).`);
+  } else console.log('Egiz: no discovery bundle in data/discovery; the Discover workspace will report it as not built.');
   return modes;
 }
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

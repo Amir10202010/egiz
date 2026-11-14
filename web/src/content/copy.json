@@ -14,7 +14,8 @@
     "lab": "Engineering Lab",
     "atlas": "Transferability",
     "studio": "Lunar World",
-    "astral": "Mission Studio"
+    "astral": "Mission Studio",
+    "discover": "Discover"
   },
   "common": {
     "synthetic": "DEMO DATA — invented for illustration, not NASA observations",

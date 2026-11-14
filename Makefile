@@ -6,7 +6,7 @@ EARTH_COUNT_PER_STRATUM ?= 1000
 EARTH_OUT_DIR ?= data/processed
 EARTH_ARGS ?=
 
-.PHONY: setup fixtures data earth test check web dev offline serve clean atlas atlas-verify atlas-discover atlas-check world world-verify world-check ml-validate-data ml-infer ml-test ml-example ml-infer-geo world-scene
+.PHONY: setup fixtures data earth test check web dev offline serve clean discover discover-acquire discover-check atlas atlas-verify atlas-discover atlas-check world world-verify world-check ml-validate-data ml-infer ml-test ml-example ml-infer-geo world-scene
 
 setup:
 	python3 -m venv .venv
@@ -149,4 +149,25 @@ ml-infer-geo:
 world-scene:
 	$(PYTHON) -m pipeline.world.scene mars-jezero
 	$(PYTHON) -m pipeline.world.illumination mars-jezero --days 3
+	node web/scripts/copy-world.mjs
+
+# EGIZ Discovery Engine (docs/discovery). discover-acquire needs network (public COGs and APIs, no credentials).
+DISCOVER_DRAWS ?= 128
+discover-acquire:
+	$(PYTHON) -m pipeline.discovery acquire --set targets --set benchmark --set kz --set global --workers 16
+discover:
+	$(PYTHON) -m pipeline.discovery index
+	$(PYTHON) -m pipeline.discovery build --draws $(DISCOVER_DRAWS)
+	$(PYTHON) -m pipeline.discovery validate
+	$(PYTHON) -m pipeline.discovery report
+	node web/scripts/copy-data.mjs
+discover-check:
+	$(PYTHON) -m pytest -q tests/test_discovery.py
+	$(PYTHON) -m pipeline.discovery verify
+	npm --prefix web test -- src/discover
+
+# Measured 3D world (ASTRAL) for any Earth window of the discovery index: make world-earth WINDOW=PILOT_BOSZHIRA
+world-earth:
+	$(PYTHON) -m pipeline.world.scene earth:$(WINDOW)
+	$(PYTHON) -m pipeline.world.illumination earth:$(WINDOW) --days 2
 	node web/scripts/copy-world.mjs

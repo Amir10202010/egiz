@@ -55,6 +55,7 @@ export default function MissionStudio() {
   const [panel, setPanel] = useState<Panel>("explore"), [side, setSide] = useState<"inspector" | "copilot">("copilot"), [quality, setQuality] = useState<Quality>(() => estimateQuality());
   const [layer, setLayer] = useState<LayerId>("none"), [slopeAbove, setSlopeAbove] = useState<number | null>(null), [opacity, setOpacity] = useState(0.6), [appearance, setAppearance] = useState<Appearance>("visualization");
   const [selection, setSelection] = useState<XY | null>(null), [pickMode, setPickMode] = useState<PickMode>("inspect"), [measure, setMeasure] = useState<XY[]>([]);
+  const [worldList, setWorldList] = useState<{ dir: string; name: string; body: string }[]>([]);
   const [spec, setSpec] = useState<MissionSpec>(defaultSpec("")), [rovers, setRovers] = useState<Record<string, RoverProfile>>(ROVERS), [result, setResult] = useState<MissionResult | null>(null), [baseline, setBaseline] = useState<MissionResult | null>(null);
   const [timeS, setTimeS] = useState(0), [missionT, setMissionT] = useState(0), [playing, setPlaying] = useState(false), [speed, setSpeed] = useState(600), [camera, setCamera] = useState<CameraMode>("site");
   const [stats, setStats] = useState<ViewStats | null>(null), [tiles, setTiles] = useState({ loaded: 0, pending: 0 }), [messages, setMessages] = useState<Message[]>([]), [command, setCommand] = useState(""), [roverNote, setRoverNote] = useState("");
@@ -68,11 +69,15 @@ export default function MissionStudio() {
       try {
         const worlds = await listWorlds(base);
         if (!worlds.length) throw new Error("No measured world package is built. Run: python -m pipeline.world.scene mars-jezero, then restart the app.");
-        const s = await loadWorld(base, worlds[0].dir, (label, done, total) => alive && setLoading({ label, done, total }));
+        const wanted = new URLSearchParams(window.location.hash.split("?")[1] ?? "").get("world");
+        const pick = worlds.find(w => w.dir === wanted) ?? worlds.find(w => w.body !== "earth") ?? worlds[0];
+        setWorldList(worlds);
+        const s = await loadWorld(base, pick.dir, (label, done, total) => alive && setLoading({ label, done, total }));
         if (!alive) return;
         // Default scene time and mission departure: three hours before the recorded solar noon.
         const morning = s.solar ? Math.max(0, firstNoon(s.solar).t - 3 * 3600) : 0;
         setSession(s); setSpec({ ...defaultSpec(s.manifest.site.id), startTimeS: morning }); setLoading(null); setTimeS(morning);
+        if (!s.image) setLayer("elevation"); // no orthoimage (e.g. Earth GLO-30 worlds): show measured elevation
         setBusy("Interpreting the scene…");
         setTimeout(() => { if (!alive) return; try { setAnalysis(analyzeScene(s)); } catch (e) { setError(`Scene analysis failed: ${e instanceof Error ? e.message : e}`); } setBusy(""); }, 60);
       } catch (e) { if (alive) { setError(e instanceof Error ? e.message : String(e)); setLoading(null); } }
@@ -197,7 +202,9 @@ export default function MissionStudio() {
     <main className="as-shell" data-panel={panel}>
       <header className="as-top">
         <button className="as-brand" onClick={() => navigate("home")} aria-label="Back to EGIZ home"><Home size={14} /><strong>EGIZ</strong><span>ASTRAL</span></button>
-        <div className="as-site"><span className="as-chip">{m.site.body.toUpperCase()}</span><b>{m.site.name}</b><small>{Math.abs(m.site.lat).toFixed(4)}°{m.site.lat < 0 ? "S" : "N"} {m.site.lon.toFixed(4)}°E</small></div>
+        <div className="as-site"><span className="as-chip">{m.site.body.toUpperCase()}</span><b>{m.site.name}</b><small>{Math.abs(m.site.lat).toFixed(4)}°{m.site.lat < 0 ? "S" : "N"} {Math.abs(m.site.lon).toFixed(4)}°{m.site.lon < 0 ? "W" : "E"}</small>
+          {worldList.length > 1 && <select aria-label="Measured world" value={session.dir} onChange={e => { window.location.hash = `#/astral?world=${encodeURIComponent(e.target.value)}`; window.location.reload(); }}>
+            {worldList.map(w => <option key={w.dir} value={w.dir}>{w.body.toUpperCase()} · {w.name}</option>)}</select>}</div>
         <form className="as-command" onSubmit={e => { e.preventDefault(); void send(command); }}>
           <Bot size={15} aria-hidden="true" /><input ref={commandInput} value={command} onChange={e => setCommand(e.target.value)} placeholder="Ask or command — e.g. “find rover hazards around this point”  (Ctrl K)" aria-label="Command and question bar" list="as-examples" />
           <datalist id="as-examples">{EXAMPLES.map(x => <option key={x} value={x} />)}</datalist><button type="submit" aria-label="Send" disabled={!command.trim()}><Send size={14} /></button>

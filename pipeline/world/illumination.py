@@ -19,7 +19,12 @@ from pipeline.world.scene import ROOT, SITES
 def build(name: str, days: int = 3, epoch: str = DEFAULT_EPOCH, step: float = 600) -> Path:
     if not 1 <= days <= 10:
         raise ValueError("days must be 1-10")
-    site = SITES[name]
+    if name.startswith("earth:"):
+        from pipeline.world.scene import earth_site
+        window = name.split(":", 1)[1]
+        site, name = earth_site(window), f"earth-{window.lower()}"
+    else:
+        site = SITES[name]
     start = datetime.fromisoformat(epoch.replace("Z", "+00:00")).astimezone(timezone.utc)
     record, samples = None, []
     for day in range(days):
@@ -37,7 +42,7 @@ def build(name: str, days: int = 3, epoch: str = DEFAULT_EPOCH, step: float = 60
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("site", choices=sorted(SITES))
+    parser.add_argument("site", help=f"one of {sorted(SITES)} or earth:<discovery window id>")
     parser.add_argument("--days", type=int, default=3)
     args = parser.parse_args()
     build(args.site, args.days)

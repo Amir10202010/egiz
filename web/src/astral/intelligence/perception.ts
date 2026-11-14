@@ -22,7 +22,8 @@ const boxSum = (ii: Float64Array, side: number, r0: number, c0: number, r1: numb
 
 /** Per-cell terrain and image descriptors. Elevation features need only the field; image features are NaN without imagery. */
 export function terrainFeatures(f: Field, image: SiteImage | null, cellM = 8): FeatureGrid {
-  const per = Math.round(cellM / f.posting), side = Math.floor((f.side - 1) / per), n = f.side;
+  // At least one post per cell: coarse worlds (e.g. 32 m Earth GLO-30) use the native posting as the cell.
+  const per = Math.max(1, Math.round(cellM / f.posting)), side = Math.floor((f.side - 1) / per), n = f.side;
   const valid = new Uint8Array(n * n), zz = new Float64Array(n * n);
   for (let i = 0; i < n * n; i++) if (!Number.isNaN(f.z[i])) { valid[i] = 1; zz[i] = f.z[i]; }
   const iz = integral(zz, n), iv = integral(valid, n);

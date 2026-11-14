@@ -8,6 +8,10 @@ Design an Earth test campaign for a Moon base region or a Mars landing site. Egi
 
 **15 October rules review:** the official 2026 FAQ and Team Formation Guide prohibit beginning challenge work before **14 November, 09:00 local time**. The user subsequently explicitly authorized further local development (DEC-029). This is not organizer permission: competition eligibility of the October prototype remains unresolved. See the [verified rules audit](docs/competition/CURRENT_RULES_AUDIT_2026_10_15.md), [readiness findings](docs/audit/FINAL_READINESS_AUDIT_2026_10_15.md), and [unsent organizer questions](docs/competition/ORGANIZER_CLARIFICATION_DRAFT.md). Files and their actual chronology are preserved.
 
+## Discover · Earth-wide analog search · 14 November 2026
+
+Open **Discover** (`/#/discover`). EGIZ now searches a measured Earth-wide index — a near-equal-area global lattice, a dense Kazakhstan lattice, published analog sites and the geo-0.1.0 windows, all processed with Copernicus GLO-30, ESA WorldCover, NASA POWER and Macrostrat — for analogs of ten lunar and Martian targets. Each candidate gets eight independently scored dimensions with Monte Carlo uncertainty, Earth-wide percentiles, rarity, novelty, a separate operational axis, a computed gap ledger and a rover experiment; four further dimensions are honestly reported as not assessed. A tool-grounded research assistant (optional server-side language model) explains results, and a published-analog benchmark reports how well the method recovers known sites. Read the [user guide and reproduction steps](docs/discovery/README.md), [methodology](docs/discovery/METHODOLOGY.md), [datasets](docs/discovery/DATASETS.md), [actual results and validation](docs/discovery/RESULTS.md) and [limitations](docs/discovery/LIMITATIONS.md).
+
 ## Run locally
 
 Requires Python 3.11+ and Node.js 24.14.1+ (the pinned optional Open MCT distribution requires this Node version; tested with Python 3.13 and Node 24.14.1).
