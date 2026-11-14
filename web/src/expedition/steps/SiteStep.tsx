@@ -4,7 +4,7 @@
 // challenges are stated by fixed rules over those values, never generated.
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Box, ChevronDown, CircleHelp, Locate, Mountain, MountainSnow, Sun, Waypoints } from 'lucide-react';
-import { t } from '../../i18n';
+import { t, useLanguage } from '../../i18n';
 import type { TargetEntry } from '../../discover/types';
 import { BODY_LABEL } from '../../planet/terrain/site';
 import { usePlanet } from '../../planet/workspace/store';
@@ -23,15 +23,27 @@ const ev = (e: string) => (e === 'physical_constraint' ? 'assumed' : e);
 interface Challenge { tone: 'risk' | 'caution' | 'info'; title: string; text: string }
 /** Fixed rules over the fingerprint. Thresholds are stated in the text so the reader can disagree with them. */
 export function challenges(x: TargetEntry, dims: ReturnType<typeof knownUnknown>, hasTerrain: boolean): Challenge[] {
+  // Sentences carry numbers, so each has an English and a Russian form; titles are dictionary keys (translated at render).
+  const ru = useLanguage.getState().language === 'ru', L = (en: string, r: string) => (ru ? r : en);
   const fine = x.body === 'moon' ? 'f100' : 'f400', p90 = featureValue(x, `slope_${fine}_p90_deg`), p50 = featureValue(x, `slope_${fine}_p50_deg`), sunMax = featureValue(x, 'noon_elevation_max_deg'), relief = featureValue(x, 'relief_m');
-  const out: Challenge[] = [], below15 = x.target_slope_cdf[15];
-  if (p90 !== null && p90 > 15) out.push({ tone: 'risk', title: 'Steep ground', text: `One tenth of the ground is steeper than ${p90.toFixed(1)}° at a ${x.fine_baseline_m} m baseline — above the 15° slope limit used for planning rovers here.${below15 !== undefined ? ` ${Math.round(below15 * 100)} % of the measured ground is gentler than 15°.` : ''}` });
-  else if (p50 !== null && p90 !== null) out.push({ tone: 'info', title: 'Drivable slopes', text: `Typical slope ${p50.toFixed(1)}°, steep tail ${p90.toFixed(1)}° — inside the 15° planning limit at the ${x.fine_baseline_m} m baseline. Rocks and slopes shorter than that baseline are not resolved.` });
-  if (sunMax !== null && sunMax < 10) out.push({ tone: 'caution', title: 'The Sun stays low', text: `The noon Sun never rises above ${sunMax.toFixed(1)}°: long shadows, cold traps, and solar power that depends on where exactly you stand.` });
-  if (relief !== null && relief > 2000) out.push({ tone: 'caution', title: 'Large relief', text: `${Math.round(relief).toLocaleString('en')} m between the highest and lowest point of the window: routes must be planned around massifs and crater walls.` });
+  const out: Challenge[] = [], below15 = x.target_slope_cdf[15], base = x.fine_baseline_m;
+  if (p90 !== null && p90 > 15) out.push({ tone: 'risk', title: 'Steep ground', text: L(
+    `One tenth of the ground is steeper than ${p90.toFixed(1)}° at a ${base} m baseline — above the 15° slope limit used for planning rovers here.${below15 !== undefined ? ` ${Math.round(below15 * 100)} % of the measured ground is gentler than 15°.` : ''}`,
+    `Десятая часть поверхности круче ${p90.toFixed(1)}° при базе ${base} м — выше предела 15°, принятого здесь для планирования роверов.${below15 !== undefined ? ` ${Math.round(below15 * 100)} % измеренной поверхности положе 15°.` : ''}`) });
+  else if (p50 !== null && p90 !== null) out.push({ tone: 'info', title: 'Drivable slopes', text: L(
+    `Typical slope ${p50.toFixed(1)}°, steep tail ${p90.toFixed(1)}° — inside the 15° planning limit at the ${base} m baseline. Rocks and slopes shorter than that baseline are not resolved.`,
+    `Типичный уклон ${p50.toFixed(1)}°, крутой хвост ${p90.toFixed(1)}° — в пределах 15° при базе ${base} м. Камни и уклоны короче этой базы не разрешены.`) });
+  if (sunMax !== null && sunMax < 10) out.push({ tone: 'caution', title: 'The Sun stays low', text: L(
+    `The noon Sun never rises above ${sunMax.toFixed(1)}°: long shadows, cold traps, and solar power that depends on where exactly you stand.`,
+    `Полуденное Солнце не поднимается выше ${sunMax.toFixed(1)}°: длинные тени, холодные ловушки и солнечная энергия, которая зависит от того, где именно стоишь.`) });
+  if (relief !== null && relief > 2000) out.push({ tone: 'caution', title: 'Large relief', text: L(
+    `${Math.round(relief).toLocaleString('en')} m between the highest and lowest point of the window: routes must be planned around massifs and crater walls.`,
+    `${Math.round(relief).toLocaleString('ru')} м между самой высокой и самой низкой точкой окна: маршруты нужно прокладывать в обход массивов и стенок кратеров.`) });
   const missing = dims.filter(d => d.status !== 'measured' && d.status !== 'not_applicable');
-  if (missing.length) out.push({ tone: 'caution', title: `${missing.length} comparison dimension${missing.length > 1 ? 's' : ''} without evidence`, text: `${missing.map(d => d.label).join(', ')}: these cannot influence any ranking and are reported as missing coverage.` });
-  if (!hasTerrain) out.push({ tone: 'info', title: 'No 3D terrain package', text: 'The fingerprint can be analysed and matched to Earth, but 3D inspection and rover simulation need a packaged elevation model.' });
+  if (missing.length) out.push({ tone: 'caution', title: 'Dimensions without evidence', text: L(
+    `${missing.length}: ${missing.map(d => d.label).join(', ')}. These cannot influence any ranking and are reported as missing coverage.`,
+    `${missing.length}: ${missing.map(d => d.label).join(', ')}. Они не влияют на рейтинг и учитываются как недостающее покрытие.`) });
+  if (!hasTerrain) out.push({ tone: 'info', title: 'No 3D terrain package', text: L('The fingerprint can be analysed and matched to Earth, but 3D inspection and rover simulation need a packaged elevation model.', 'Отпечаток можно проанализировать и сопоставить с Землёй, но для 3D-осмотра и моделирования ровера нужна упакованная модель рельефа.') });
   return out;
 }
 

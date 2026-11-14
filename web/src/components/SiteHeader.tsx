@@ -91,9 +91,8 @@ export function SiteHeader({ availableModes }: { availableModes: DataMode[] }) {
   const go = (r: Route) => { setMenuOpen(false); openWorkspace(r); };
   return <header ref={bar} className={classes}>
     <button className="eg-wordmark" aria-label={t('Egiz campaign home')} onClick={() => useAppStore.getState().navigate('home')}><EgizMark /><strong>{copy.brand.name}</strong></button>
-    {here >= 0 && route !== 'home' ? <p className="eg-here" aria-hidden="true"><span>{String(here + 1).padStart(2, '0')}</span>{t(titleOf(section))}</p> : <span />}
+    {here >= 0 && route !== 'home' ? <p className="eg-here" aria-hidden="true"><span>{String(here + 1).padStart(2, '0')}</span>{t(titleOf(section))}</p> : null}
     <div className="eg-header-tools">
-      <MissionChip />
       <DataModePicker available={availableModes} compact />
       <button className="eg-notes-toggle" aria-pressed={notes} aria-label={t('Show explanations')} title={t('Show explanations')} onClick={() => setNotes(!notes)}><Type size={15} /></button>
       <LanguageSwitcher />

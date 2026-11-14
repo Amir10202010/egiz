@@ -4,11 +4,13 @@
 // after another; each shows its method, its data, its own measured run time and its outputs. Findings are written
 // from those outputs by fixed rules. A stored run can be re-executed to check it reproduces.
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowRight, Check, CircleAlert, CircleDashed, LoaderCircle, RotateCcw, ShieldCheck, TriangleAlert } from 'lucide-react';
+import { ArrowRight, Check, ChevronRight, CircleAlert, CircleDashed, LoaderCircle, RotateCcw, ShieldCheck, TriangleAlert } from 'lucide-react';
 import { t } from '../../i18n';
 import { usePlanet } from '../../planet/workspace/store';
 import { analysisCurrent, insights, runStep, STEPS, toRecord, type AnalysisInput, type Insight, type RunState, type StepId, type StepResult } from '../../planet/journey/analysis';
 import { AskPanel } from '../AskPanel';
+import { More } from '../More';
+import { trTitle } from '../trEngine';
 import { StepFooter, StepHead } from '../ExpeditionPage';
 import { fmtMs, short, utcShort } from '../format';
 
@@ -47,44 +49,69 @@ export function AnalysisStep() {
     setFound(insights(input, st, out));
   };
   if (!x || !b) return <div className="xp-msg" role="status">{s.discoveryError ?? t('Loading the measured site index…')}</div>;
-  return <div className="xp-analysis">
-    <aside className="xp-analysis-side">
-      <StepHead step="analysis">{short(x.name)} · {x.dem}</StepHead>
-      <h2 className="xp-h3">{t('What is the mission asking?')}</h2>
-      <p className="xp-dim">{t('The question sets how much each kind of resemblance counts. It is a preference, not a measurement — and the analysis tests how much the answer depends on it.')}</p>
-      <div className="xp-profiles" role="radiogroup" aria-label={t('Mission question')}>{Object.entries(b.profiles).map(([k, p]) => <button key={k} role="radio" aria-checked={s.inv.profile === k} className={s.inv.profile === k ? 'on' : ''} disabled={!!running}
-        onClick={() => { if (s.inv.profile === k) return; s.patchInv({ profile: k, weights: null }); s.log('profile', `Set the mission question to “${p.label}”`); }}><b>{t(p.label)}</b><span>{t(PROFILE_MEANING[k] ?? '')}</span></button>)}</div>
+  const shown: { tone: string; title: string; text: string }[] = found ? found.map(z => ({ tone: z.tone === 'lead' || z.tone === 'good' ? 'info' : z.tone, title: z.title, text: z.text }))
+    : stored && current ? stored.findings.map(f => ({ tone: f.severity === 'reject' ? 'risk' : f.severity === 'caution' ? 'caution' : 'info', title: f.title, text: f.detail })) : [];
+  const hasResult = results.length === STEPS.length || (!!stored && current && !running && !results.length);
+  const verdict = found ? usePlanet.getState().inv.analysis?.verdict : stored?.verdict, leader = (found ? usePlanet.getState().inv.analysis : stored)?.top10[0];
+  const totalMs = results.reduce((a, r) => a + r.ms, 0), nRisk = shown.filter(z => z.tone === 'risk').length, nCaution = shown.filter(z => z.tone === 'caution').length;
+  const leaderName = leader ? (() => { const k = b.windows.id.indexOf(leader); return k >= 0 ? `${b.windows.name[k]}${b.windows.country[k] ? ` · ${b.windows.country[k]}` : ''}` : leader; })() : null;
+  return <div className="xp-analysis xp-focus">
+    <StepHead step="analysis">{short(x.name)} · {x.dem}</StepHead>
+
+    {/* 1 — the question */}
+    <section className="xp-q" aria-label={t('Mission question')}>
+      <h2 className="xp-label">{t('What is the mission asking?')}</h2>
+      <div className="xp-chips-row" role="radiogroup" aria-label={t('Mission question')}>{Object.entries(b.profiles).map(([k, p]) => <button key={k} role="radio" aria-checked={s.inv.profile === k} className={s.inv.profile === k ? 'on' : ''} disabled={!!running}
+        onClick={() => { if (s.inv.profile === k) return; s.patchInv({ profile: k, weights: null }); s.log('profile', `Set the mission question to “${p.label}”`); }}>{t(p.label)}</button>)}</div>
+      <p className="xp-q-meaning">{t(PROFILE_MEANING[s.inv.profile] ?? '')}</p>
+      <More label="Why this matters"><p>{t('The question sets how much each kind of resemblance counts. It is a preference, not a measurement — and the analysis tests how much the answer depends on it.')}</p></More>
       {s.inv.weights && <p className="xp-warn">{t('Custom weights are active.')} <button className="xp-link" onClick={() => s.patchInv({ weights: null })}>{t('Reset to the profile')}</button></p>}
-      <button className="eg-button xp-run" onClick={run} disabled={!input || !!running}>{running ? <><LoaderCircle size={15} className="xp-spin" />{t('Running…')}</> : results.length || current ? <><RotateCcw size={15} />{t('Run again')}</> : <>{t('Run the analysis')}<ArrowRight size={16} strokeWidth={1.6} /></>}</button>
-      {!shardReady && <p className="xp-dim" role="status">{t('Loading the per-window scores for')} {x.id}…</p>}
-      {current && !results.length && stored && <p className="xp-stored"><ShieldCheck size={14} />{t('Analysed')} {utcShort(stored.ranUtc)} · {t('verdict')} <b>{stored.verdict}</b> · {t('leader')} {stored.top10[0]}. {t('Run again to verify it reproduces.')}</p>}
-      {stored && !current && <p className="xp-warn">{t('The last analysis no longer matches the site or the question. Run again before relying on it.')}</p>}
-      <p className="xp-dim xp-small">{t('Runs entirely in this browser on the packaged measured index. No language model or external service is used.')}</p>
-    </aside>
-    <div className="xp-analysis-main">
-      <ol className="xp-steps" aria-label={t('Analysis steps')} aria-live="polite">
-        {STEPS.map((step, i) => { const r = results.find(z => z.id === step.id), state = r ? (r.ok ? 'done' : 'failed') : running === step.id ? 'running' : 'queued';
-          return <li key={step.id} className={`xp-astep s-${state}`}>
-            <span className="xp-astep-icon" aria-hidden="true">{state === 'done' ? <Check size={14} /> : state === 'failed' ? <CircleAlert size={14} /> : state === 'running' ? <LoaderCircle size={14} className="xp-spin" /> : <CircleDashed size={14} />}</span>
-            <div className="xp-astep-body">
-              <h3><b>{String(i + 1).padStart(2, '0')}</b>{t(step.title)}{r && <span className="xp-ms">{fmtMs(r.ms)}</span>}</h3>
-              <p className="xp-method">{t(step.method)}<span> · {step.data(input ?? ({ bundle: b, target: x, weights, profile: s.inv.profile, validation: s.validation, atlas: s.atlas, space: s.space } as AnalysisInput))}</span></p>
-              {r && <><p className="xp-sum">{r.summary}</p>
-                {r.facts.length > 0 && <dl className="xp-facts">{r.facts.map(f => <div key={f.label}><dt>{f.label}</dt><dd>{f.value}<em className={`xp-ev ev-${f.evidence}`}>{f.evidence}</em></dd></div>)}</dl>}
-                {r.detail && r.detail.length > 0 && <details><summary>{t('Details')}</summary><ul>{r.detail.map(d => <li key={d}>{d}</li>)}</ul></details>}</>}
-            </div>
-          </li>; })}
-      </ol>
-      {!results.length && !running && <p className="xp-dim">{t('Eight computations run in order. Each reports what it used and how long it took.')}</p>}
-      {repro && <p className="xp-repro" role="status"><ShieldCheck size={15} />{repro}</p>}
-      {found && <section className="xp-found" aria-label={t('Findings')}>
-        <h2 className="xp-h3">{t('What the analysis found')}</h2>
-        <ul className="xp-insights">{found.map(z => <li key={z.title} className={`t-${z.tone === 'lead' || z.tone === 'good' ? 'info' : z.tone}`}>{z.tone === 'risk' ? <TriangleAlert size={15} /> : z.tone === 'caution' ? <CircleAlert size={15} /> : <Check size={15} />}<div><b>{z.title}</b><p>{z.text}</p></div></li>)}</ul>
-      </section>}
-      {!found && stored && current && stored.findings.length > 0 && <section className="xp-found"><h2 className="xp-h3">{t('Findings of the stored run')}</h2>
-        <ul className="xp-insights">{stored.findings.map(f => <li key={f.title} className={`t-${f.severity === 'reject' ? 'risk' : f.severity === 'caution' ? 'caution' : 'info'}`}><div><b>{f.title}</b><p>{f.detail}</p></div></li>)}</ul></section>}
-      {(found || current) && <AskPanel />}
-      <StepFooter step="analysis" ready={!!current || !!found} why="One site is never the whole story. See how the other measured sites on this world compare before committing." />
+    </section>
+
+    {/* 2 — run */}
+    <div className="xp-runbar">
+      <button className="eg-button xp-run" onClick={run} disabled={!input || !!running}>{running ? <><LoaderCircle size={15} className="xp-spin" />{t('Running…')} {results.length}/{STEPS.length}</> : results.length || current ? <><RotateCcw size={15} />{t('Run again')}</> : <>{t('Run the analysis')}<ArrowRight size={16} strokeWidth={1.6} /></>}</button>
+      <div className="xp-runbar-steps" aria-hidden="true">{STEPS.map(step => { const r = results.find(z => z.id === step.id); return <i key={step.id} className={r ? (r.ok ? 'done' : 'failed') : running === step.id ? 'running' : hasResult ? 'done' : ''} />; })}</div>
+      <span className="xp-dim xp-small">{!shardReady ? `${t('Loading the per-window scores for')} ${x.id}…` : results.length === STEPS.length ? `${STEPS.length} ${t('computations')} · ${fmtMs(totalMs)} · ${t('in this browser')}` : stored && current && !results.length ? `${t('Analysed')} ${utcShort(stored.ranUtc)}` : t('Eight computations, in this browser, no language model.')}</span>
     </div>
+    {stored && !current && !running && <p className="xp-warn">{t('The last analysis no longer matches the site or the question. Run again before relying on it.')}</p>}
+    {repro && <p className="xp-repro" role="status"><ShieldCheck size={15} />{repro}</p>}
+
+    {/* 3 — the answer first */}
+    {hasResult && verdict && <section className="xp-summary" aria-label={t('Result')}>
+      <div className={`xp-verdict-big v-${verdict}`}><span className="xp-label">{t('Critic verdict')}</span><b>{t(verdict)}</b></div>
+      <div><span className="xp-label">{t('Closest Earth analog')}</span><b className="xp-sum-v">{leaderName ?? '—'}</b></div>
+      <div><span className="xp-label">{t('Findings')}</span><b className="xp-sum-v">{nRisk > 0 && <i className="sev r">{nRisk}</i>}{nCaution > 0 && <i className="sev c">{nCaution}</i>}<i className="sev i">{shown.length - nRisk - nCaution}</i></b></div>
+    </section>}
+    {shown.length > 0 && <section className="xp-found" aria-label={t('Findings')}>
+      <h2 className="xp-label">{t('What the analysis found')}</h2>
+      <ul className="xp-cards">{shown.map(z => <li key={z.title} className={`t-${z.tone}`}>
+        <span className="xp-card-ico">{z.tone === 'risk' ? <TriangleAlert size={16} /> : z.tone === 'caution' ? <CircleAlert size={16} /> : <Check size={16} />}</span>
+        <div><b>{trTitle(z.title)}</b><More label="Explain">{<p>{z.text}</p>}</More></div></li>)}</ul>
+    </section>}
+
+    {/* 4 — how it was computed (open any step) */}
+    <section className="xp-howbox" aria-label={t('Analysis steps')}>
+      <h2 className="xp-label">{t('How it was computed')}</h2>
+      <ol className="xp-tl" aria-live="polite">{STEPS.map((step, i) => { const r = results.find(z => z.id === step.id), state = r ? (r.ok ? 'done' : 'failed') : running === step.id ? 'running' : 'queued';
+        return <li key={step.id} className={`s-${state}`}>
+          <details>
+            <summary>
+              <span className="xp-tl-ico" aria-hidden="true">{state === 'done' ? <Check size={13} /> : state === 'failed' ? <CircleAlert size={13} /> : state === 'running' ? <LoaderCircle size={13} className="xp-spin" /> : <CircleDashed size={13} />}</span>
+              <span className="xp-tl-n">{String(i + 1).padStart(2, '0')}</span><b>{t(step.title)}</b>{r && <span className="xp-ms">{fmtMs(r.ms)}</span>}<ChevronRight size={14} className="xp-more-arrow" aria-hidden="true" />
+              {r && <span className="xp-tl-sum">{r.summary}</span>}
+            </summary>
+            <div className="xp-tl-body">
+              <p className="xp-method">{t(step.method)}<span> · {step.data(input ?? ({ bundle: b, target: x, weights, profile: s.inv.profile, validation: s.validation, atlas: s.atlas, space: s.space } as AnalysisInput))}</span></p>
+              {r && r.facts.length > 0 && <dl className="xp-facts">{r.facts.map(f => <div key={f.label}><dt>{f.label}</dt><dd>{f.value}<em className={`xp-ev ev-${f.evidence}`}>{f.evidence}</em></dd></div>)}</dl>}
+              {r?.detail && r.detail.length > 0 && <ul className="xp-notes">{r.detail.map(d => <li key={d}>{d}</li>)}</ul>}
+              {!r && <p className="xp-dim">{t('Not run yet.')}</p>}
+            </div>
+          </details>
+        </li>; })}</ol>
+    </section>
+
+    {(found || current) && <More label="Ask about these results" className="xp-ask-more"><AskPanel title="" /></More>}
+    <StepFooter step="analysis" ready={!!current || !!found} why="One site is never the whole story. See how the other measured sites on this world compare before committing." />
   </div>;
 }

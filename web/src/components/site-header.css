@@ -116,8 +116,8 @@ html.eg-menu-lock { overflow: hidden; }
 .eg-nav-start:hover svg { transform: translateX(4px); } .eg-nav-start svg { transition: transform .45s var(--ease-out); }
 .eg-nav-group { max-width: 1280px; margin-bottom: clamp(16px, 2.6vh, 32px); position: relative; z-index: 1; }
 .eg-nav-group .eg-nav-kicker { margin-bottom: 4px; }
-.eg-header .eg-nav-group button { padding: 14px 0; }
-.eg-nav-group .eg-nav-title { font-size: clamp(24px, 2.6vw, 40px); }
+.eg-header .eg-nav-group button { padding: 16px 0; }
+.eg-nav-group .eg-nav-title { font-size: clamp(28px, 3.3vw, 50px); }
 .eg-nav-note { grid-column: 2; margin-top: 6px; font-family: var(--font-mono); font-size: 10.5px; letter-spacing: .04em; line-height: 1.45; color: var(--paper-4); text-transform: none; transition: color .35s; }
 .eg-header .eg-nav button:hover .eg-nav-note, .eg-header .eg-nav button[aria-current=page] .eg-nav-note { color: var(--paper-3); }
 @media (max-width: 1180px) { .eg-mission-chip b { max-width: 140px; } }
@@ -139,21 +139,15 @@ html.eg-menu-lock { overflow: hidden; }
 @media (max-width: 760px) { .eg-switch .eg-mission-chip { display: none; } }
 .eg-switch .eg-switch-menu button { background: none !important; border-radius: 0 !important; border-left: 0 !important; border-right: 0 !important; border-top: 0 !important; }
 .eg-switch .eg-switch-menu button:hover, .eg-switch .eg-switch-menu button[aria-current=page] { background: rgba(240, 240, 245, .04) !important; }
-.eg-switch .eg-switch-toggle, .eg-switch .eg-mission-chip { border-radius: 0 !important; }
+.eg-switch .eg-switch-toggle { border-radius: 0 !important; }
 
-/* ---------- the index as a compact panel under the Menu button (titles only; the page dims behind it) ---------- */
-.eg-header .eg-nav { inset: auto; top: calc(var(--header-h) + 6px); right: var(--gutter); left: auto; bottom: auto; z-index: 70;
-  width: min(720px, calc(100vw - 2 * var(--gutter))); max-height: calc(100dvh - var(--header-h) - 24px); padding: 22px 26px 12px;
-  border: 1px solid var(--rule-strong); background: #050506; box-shadow: 0 0 0 100vmax rgba(0, 0, 0, .6), 0 30px 60px rgba(0, 0, 0, .6); }
-.eg-header .eg-nav::before, .eg-header .eg-nav::after { display: none; }
-.eg-header .eg-nav-mission { margin-bottom: 14px; padding-bottom: 14px; border-bottom: 1px solid var(--rule); }
-.eg-header .eg-nav-mission .eg-nav-kicker { margin-bottom: 6px; }
-.eg-header .eg-nav-mission-line, .eg-header .eg-nav-start { font-size: 18px; }
-.eg-header .eg-nav-group { margin-bottom: 12px; }
-.eg-header .eg-nav-kicker { margin: 0 0 2px; font-size: 9.5px; }
-.eg-header .eg-nav-list { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 28px; }
-.eg-header .eg-nav-group button { grid-template-columns: 26px 1fr; padding: 9px 0; }
-.eg-header .eg-nav-group .eg-nav-title { font-size: 19px; line-height: 1.1; letter-spacing: .04em; }
-.eg-header .eg-nav-index { font-size: 10px; }
-.eg-header .eg-nav button:hover .eg-nav-title { transform: translateX(5px); }
-@media (max-width: 560px) { .eg-header .eg-nav { right: 12px; width: calc(100vw - 24px); padding: 18px 18px 8px; } .eg-header .eg-nav-list { grid-template-columns: 1fr; } }
+
+/* the mission line sits in one row above the index; the index keeps the full-screen table-of-contents look */
+.eg-header .eg-nav .eg-nav-start { display: inline-flex; grid-template-columns: none; align-items: center; gap: 12px; padding: 0; border: 0; opacity: 1; transform: none; color: var(--paper); font-size: clamp(18px, 1.6vw, 24px); }
+.eg-header .eg-nav-mission { display: flex; align-items: baseline; flex-wrap: wrap; gap: 6px 18px; margin-bottom: clamp(10px, 2vh, 22px); }
+.eg-header .eg-nav-mission .eg-nav-kicker { margin: 0; }
+.eg-header .eg-nav-mission-line { font-size: clamp(18px, 1.6vw, 24px); }
+.eg-header .eg-nav-group { margin-bottom: clamp(8px, 1.6vh, 18px); }
+.eg-header .eg-nav-group .eg-nav-kicker { margin: 0 0 2px; }
+.eg-header .eg-nav-group button { padding: clamp(9px, 1.4vh, 14px) 0; }
+.eg-nav-group .eg-nav-title { font-size: clamp(26px, min(3vw, 5.2vh), 46px); }

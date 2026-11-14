@@ -25,7 +25,7 @@ export function AskPanel({ selected, title = 'Ask about these results' }: { sele
   const submit = (text: string) => { const v = text.trim(); if (!v) return; const a = ask(v, ctx); usePlanet.getState().set({ answers: [...usePlanet.getState().answers, a].slice(-30) }); setMine(m => [...m, a.id]); setQ(''); };
   const answers = s.answers.filter(a => mine.includes(a.id)).reverse();
   return <section className="xp-ask" aria-label={t(title)}>
-    <h2 className="xp-h3">{t(title)}</h2>
+    {title && <h2 className="xp-h3">{t(title)}</h2>}
     <p className="xp-dim xp-small">{t('Deterministic assistant: it calls EGIZ’s engines and an independent critic reviews every answer. No language model, no generated numbers.')} <span className="xp-ctx">{describeContext(ctx)}</span></p>
     <form onSubmit={e => { e.preventDefault(); submit(q); }}><input value={q} onChange={e => setQ(e.target.value)} placeholder={t('Ask a question…')} aria-label={t('Research question')} autoComplete="off" /><button className="eg-button" disabled={!q.trim() || !ctx.discovery}>{t('Ask')}</button></form>
     <div className="xp-suggest">{QUESTIONS.map(x => <button key={x} disabled={!ctx.discovery} onClick={() => submit(x)}>{t(x)}</button>)}</div>

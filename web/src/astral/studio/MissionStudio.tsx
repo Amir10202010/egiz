@@ -215,7 +215,7 @@ export default function MissionStudio() {
         </form>
         <label className="as-quality">Quality<select value={quality} onChange={e => setQuality(e.target.value as Quality)} aria-label="Rendering quality"><option value="performance">Performance</option><option value="balanced">Balanced</option><option value="high">High</option></select></label>
         <button className="as-btn" onClick={() => void exportDossier()}><FileDown size={14} /> Dossier</button>
-        <WorkspaceSwitcher />
+        <WorkspaceSwitcher toggleClass="as-btn" compact />
       </header>
       <nav className="as-rail" aria-label="Studio sections">{PANELS.map(({ id, label, icon: Icon }) => <button key={id} aria-current={panel === id ? "page" : undefined} onClick={() => setPanel(id)}><Icon size={17} /><span>{label}</span></button>)}</nav>
 

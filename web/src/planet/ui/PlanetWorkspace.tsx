@@ -215,7 +215,7 @@ function Workspace() {
       <input className="pl-title" aria-label="Investigation title" value={s.inv.title} onChange={e => s.patchInv({ title: e.target.value })} />
       <span className="pl-context" title="Active context shared by every stage">{target ? target.id : 'no target'}{site ? ` · ${site.id}` : ''}{s.inv.candidates.length ? ` · ${s.inv.candidates.length} candidate${s.inv.candidates.length > 1 ? 's' : ''}` : ''}</span>
       <button className={`pl-ask-toggle ${s.intelOpen ? 'on' : ''}`} onClick={() => s.set({ intelOpen: !s.intelOpen })} aria-pressed={s.intelOpen} title="Research assistant (Ctrl+K or /)"><MessageSquareText size={15} />Ask</button>
-      <WorkspaceSwitcher />
+      <WorkspaceSwitcher toggleClass="pl-ask-toggle" label="Tools" />
     </header>
     <div className="pl-body">
       <main className="pl-main">
