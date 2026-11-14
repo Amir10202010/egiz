@@ -1,5 +1,7 @@
 # Performance — before / after (2026-11-14)
 
+> **Superseded (14 Nov 2026):** the three.js landing measured here was replaced on `main` by the film-based landing (PR #3). The figures below describe the old landing and are kept as a record; the new landing has not been re-measured.
+
 Rule: no change to any scientific output. The discovery bundle, score shards and
 `docs/discovery/RESULTS.md` are untouched by this work (only web code, assets and
 `vercel.json` changed). `python -m pipeline.discovery verify` reproduces the committed bundle.

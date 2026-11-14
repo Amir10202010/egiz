@@ -2051,5 +2051,10 @@
   "HiRISE (NASA MRO) Jezero terrain via USGS, used for the Mission Studio world": "Рельеф Езеро HiRISE (NASA MRO) через USGS — мир Mission Studio",
   "SPICE kernels from NASA NAIF (Sun and Earth geometry, lighting)": "Ядра SPICE NASA NAIF (геометрия Солнца и Земли, освещение)",
   "Copernicus DEM GLO-30 (ESA / Copernicus programme) — Earth terrain": "Copernicus DEM GLO-30 (ESA / программа Copernicus) — рельеф Земли",
-  "ESA WorldCover 2021 v200 — Earth land cover": "ESA WorldCover 2021 v200 — покров Земли"
+  "ESA WorldCover 2021 v200 — Earth land cover": "ESA WorldCover 2021 v200 — покров Земли",
+  "Menu": "Меню",
+  "Index": "Указатель",
+  "Planetary Studio": "Планетарная студия",
+  "Loading Planetary Studio…": "Загрузка планетарной студии…",
+  "Show explanations": "Показать пояснения"
 }
