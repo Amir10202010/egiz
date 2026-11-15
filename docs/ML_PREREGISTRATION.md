@@ -1,8 +1,8 @@
-# ML Stage 2 pre-registration — DRAFT, NOT FROZEN
+# ML Stage 2 pre-registration — FROZEN 15 November 2026
 
 Written with AI assistance (Claude Code); human review pending. Drafted 14 November 2026.
 
-**Status: draft.** Nothing has been evaluated against the reference set. The set is frozen only after review by the science lead. Freezing means a commit that adds the SHA-256 values in §6 and a date. Any evaluation run before that commit does not count.
+**Status: frozen** on 15 November 2026, before any reference AOI was scored. The SHA-256 values of the frozen files are in `data/ml/reference/FREEZE.json`, which is committed before the first run of `python -m pipeline.ml evaluate`. Later changes are allowed only as dated amendments in §9 that keep this text.
 
 ## 1. Question
 
@@ -77,7 +77,7 @@ The freeze is the file `data/ml/reference/FREEZE.json`. It holds:
 
 `python -m pipeline.ml evaluate` **refuses to run** (exit code 3, no output file) when that file is absent, when a hash differs, or when no reviewer is named. Tests rank only synthetic `FAKE_` tiles. Until the freeze, no real reference AOI is scored by any code path.
 
-Frozen on: *not yet*. Reviewed by: *science lead, pending*.
+Frozen on: 15 November 2026. Decisions in §8 were taken by the project owner (branch larpmonster67) in place of a separate science-lead review.
 
 ## 7. Current state of the draft (honest forecast)
 
@@ -101,3 +101,15 @@ Open judgement calls for the science lead:
 - Haughton O3: a robotic rover is not a crewed LTV.
 - McMurdo M4: an environmental analog, not a task rehearsal.
 - Whether Apollo-era geology training should count for a south-pole target at all (S4).
+
+## 8. Decisions taken before the freeze (15 November 2026)
+
+1. **Apollo-era training counts for the south-pole target:** yes. P1 keeps the 11 Apollo-era O2 pairs. S4, which is P1 without Apollo, is still reported.
+2. **Haughton K10 robotic follow-up → O3:** kept as is.
+3. **Coordinate precision rule:** kept as is. P1 takes `feature` and `point` coordinates only; the 10 `area` pairs go to S1.
+   - Testable pairs: 16 with precise coordinates (14 in P1, 2 grade C), 10 `area`, 3 without coordinates.
+4. **Exclusions** (Mauna Kea, Rio Tinto, Atacama, Cinder Lake, Nevada Test Site) are kept as listed.
+
+## 9. Amendments
+
+None.
