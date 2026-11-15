@@ -50,6 +50,38 @@ REGIONS = {  # Nominatim reverse geocoding, zoom 6, accessed 2026-11-15
     "SM_W074.290_S15.440": "Ayacucho, Peru",
 }
 
+# Quick literature check, 15 November 2026 (English web search, one or two queries per site; not exhaustive).
+# status: region_known = the wider region is a published Mars/Moon analog; mentioned = only passing or distant
+# mentions; none_found = no analog study found for the region.
+LITERATURE = {
+    "SM_E026.496_N26.620": ("region_known", "Western Desert of Egypt: aeolian landforms studied as Mars analogs "
+                            "(El-Baz et al. 1979, JGR; NASA reports on the Kharga depression, ~400 km east)",
+                            "https://pubs.usgs.gov/publication/70012315"),
+    "SM_W002.775_N23.704": ("region_known", "Tanezrouft Basin: salt-flat deposits proposed as a Mars Sample Return "
+                            "analog (AZALEA project, EPSC-DPS 2025)",
+                            "https://meetingorganizer.copernicus.org/EPSC-DPS2025/EPSC-DPS2025-1671.html"),
+    "SM_W009.541_N28.648": ("region_known", "Southern Morocco: Tindouf Basin soils as a Noachian Mars analog "
+                            "(Oberlin et al. 2018); other Moroccan sites near Erfoud (MARS2013, ESA rover tests)",
+                            "https://research-portal.st-andrews.ac.uk/en/publications/evaluation-of-the-tindouf-basin-region-in-southern-morocco-as-an-/"),
+    "SM_E056.315_N32.716": ("region_known", "Lut Desert (northern Lut begins near Tabas): megaripples and yardangs "
+                            "as Mars analogs (Foroutan & Zimbelman 2016, Icarus)", "https://profiles.si.edu/display/sro_139430"),
+    "SM_E060.488_N29.596": ("region_known", "East of the Lut Desert analog region (Foroutan & Zimbelman 2016); "
+                            "nothing found for Zahedan itself", "https://profiles.si.edu/display/sro_139430"),
+    "SM_E088.272_N42.406": ("mentioned", "Turpan depression appears only as a site caption on a popular Mars-analog "
+                            "page; Chinese Mars-analog work concentrates on the Qaidam Basin", "https://planete-mars.com/?p=1094"),
+    "SM_E022.552_N29.356": ("mentioned", "Sahara-wide analog proposals; the nearest specific Libyan analog is "
+                            "Wau-an-Namus volcano (~600 km away)", "https://programme.exordo.com/ims2016/delegates/presentation/444"),
+    "SM_E012.445_N16.628": ("mentioned", "Ténéré linear dunes compared with Mars and Titan dunes (far north of Diffa)",
+                            "https://www.futura-sciences.com/sciences/actualites/cea-dunes-mars-titan-mieux-comprises-grace-desert-tenere-60334/"),
+    "SM_E064.275_N33.323": ("none_found", "No planetary-analog study of Ghor Province found", None),
+    "SM_E036.670_N20.393": ("none_found", "Red Sea Hills of Sudan described by NASA Earth Observatory, not as an analog",
+                            "https://eol.jsc.nasa.gov/Collections/EarthObservatory/articles/TheRedSeaHillsofSudan.htm"),
+    "SM_E057.245_N34.350": ("none_found", "No analog study found for Boshruyeh (north of the Lut analog region)", None),
+    "SM_E104.764_N38.565": ("none_found", "Alxa deserts: only a tourist 'Mars Base 1'; no scientific analog study found", None),
+    "SM_W074.290_S15.440": ("none_found", "Nearest Peruvian Mars analog is Pampas de La Joya (~260 km SE); nothing found "
+                            "for this area", None),
+}
+
 
 def build(results_dir: Path, geo_dir: Path, env_dir: Path, sites_csv: Path) -> dict:
     catalog = {a["aoi_id"]: a for a in json.loads((geo_dir / "aoi_catalog.json").read_text(encoding="utf-8"))["aois"]}
@@ -78,6 +110,7 @@ def build(results_dir: Path, geo_dir: Path, env_dir: Path, sites_csv: Path) -> d
             site = sites.setdefault(c["aoi_id"], {
                 "aoi_id": c["aoi_id"], "region": REGIONS.get(c["aoi_id"]), "lon": c["lon"], "lat": c["lat"],
                 "nearest_known": {"site": nearest, "km": round(dist)},
+                "literature": dict(zip(("status", "note", "url"), LITERATURE.get(c["aoi_id"], ("unchecked", "", None)))),
                 "conditions": {"bare_frac": bare, "precip_mm": round(precip, 1),
                                "t_min_c": env[c["aoi_id"]]["t_min_c"], "t_max_c": env[c["aoi_id"]]["t_max_c"],
                                "relief_m": a["summary"].get("relief_m"), "elev_p50_m": a["summary"].get("elev_p50_m"),
@@ -94,7 +127,7 @@ def build(results_dir: Path, geo_dir: Path, env_dir: Path, sites_csv: Path) -> d
             "inputs": {"results": str(results_dir), "geo": str(geo_dir), "env": str(env_dir), "known": str(sites_csv)},
             "caveats": [
                 "Similarity of measured conditions for a task, not suitability: access, safety, permits not assessed.",
-                "'New' = farther than 150 km from our reference list and pilots; not checked against all literature.",
+                "'New' = farther than 150 km from our reference list and pilots; a quick literature check is in 'literature'.",
                 "Geology label is a map-unit proxy at the AOI centre, not mineralogy.",
                 "Earth cannot reproduce vacuum, gravity, radiation or full thermal conditions of the Moon or Mars.",
                 "Cold/dry objectives O5 and M4 are not included: target surface temperatures are not curated yet.",

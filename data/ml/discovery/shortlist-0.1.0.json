@@ -17,7 +17,7 @@
  },
  "caveats": [
   "Similarity of measured conditions for a task, not suitability: access, safety, permits not assessed.",
-  "'New' = farther than 150 km from our reference list and pilots; not checked against all literature.",
+  "'New' = farther than 150 km from our reference list and pilots; a quick literature check is in 'literature'.",
   "Geology label is a map-unit proxy at the AOI centre, not mineralogy.",
   "Earth cannot reproduce vacuum, gravity, radiation or full thermal conditions of the Moon or Mars.",
   "Cold/dry objectives O5 and M4 are not included: target surface temperatures are not curated yet."
@@ -31,6 +31,11 @@
    "nearest_known": {
     "site": "PILOT_BOSZHIRA",
     "km": 1422
+   },
+   "literature": {
+    "status": "none_found",
+    "note": "No planetary-analog study of Ghor Province found",
+    "url": null
    },
    "conditions": {
     "bare_frac": 0.8718,
@@ -158,6 +163,11 @@
     "site": "PILOT_BOSZHIRA",
     "km": 2758
    },
+   "literature": {
+    "status": "mentioned",
+    "note": "Turpan depression appears only as a site caption on a popular Mars-analog page; Chinese Mars-analog work concentrates on the Qaidam Basin",
+    "url": "https://planete-mars.com/?p=1094"
+   },
    "conditions": {
     "bare_frac": 0.9698,
     "precip_mm": 138.4,
@@ -282,6 +292,11 @@
     "site": "PILOT_BOSZHIRA",
     "km": 1202
    },
+   "literature": {
+    "status": "region_known",
+    "note": "Lut Desert (northern Lut begins near Tabas): megaripples and yardangs as Mars analogs (Foroutan & Zimbelman 2016, Icarus)",
+    "url": "https://profiles.si.edu/display/sro_139430"
+   },
    "conditions": {
     "bare_frac": 0.9988,
     "precip_mm": 108.1,
@@ -338,6 +353,11 @@
     "site": "PILOT_WADI_RUM",
     "km": 1019
    },
+   "literature": {
+    "status": "none_found",
+    "note": "Red Sea Hills of Sudan described by NASA Earth Observatory, not as an analog",
+    "url": "https://eol.jsc.nasa.gov/Collections/EarthObservatory/articles/TheRedSeaHillsofSudan.htm"
+   },
    "conditions": {
     "bare_frac": 0.9984,
     "precip_mm": 52.1,
@@ -387,6 +407,11 @@
     "site": "PILOT_BOSZHIRA",
     "km": 1040
    },
+   "literature": {
+    "status": "none_found",
+    "note": "No analog study found for Boshruyeh (north of the Lut analog region)",
+    "url": null
+   },
    "conditions": {
     "bare_frac": 0.9919,
     "precip_mm": 122.9,
@@ -435,6 +460,11 @@
    "nearest_known": {
     "site": "RIO_TINTO",
     "km": 1553
+   },
+   "literature": {
+    "status": "region_known",
+    "note": "Tanezrouft Basin: salt-flat deposits proposed as a Mars Sample Return analog (AZALEA project, EPSC-DPS 2025)",
+    "url": "https://meetingorganizer.copernicus.org/EPSC-DPS2025/EPSC-DPS2025-1671.html"
    },
    "conditions": {
     "bare_frac": 1.0,
@@ -492,6 +522,11 @@
     "site": "PILOT_WADI_RUM",
     "km": 1253
    },
+   "literature": {
+    "status": "mentioned",
+    "note": "Sahara-wide analog proposals; the nearest specific Libyan analog is Wau-an-Namus volcano (~600 km away)",
+    "url": "https://programme.exordo.com/ims2016/delegates/presentation/444"
+   },
    "conditions": {
     "bare_frac": 1.0,
     "precip_mm": 35.9,
@@ -547,6 +582,11 @@
    "nearest_known": {
     "site": "PILOT_BOSZHIRA",
     "km": 4213
+   },
+   "literature": {
+    "status": "none_found",
+    "note": "Alxa deserts: only a tourist 'Mars Base 1'; no scientific analog study found",
+    "url": null
    },
    "conditions": {
     "bare_frac": 0.9837,
@@ -604,6 +644,11 @@
     "site": "PILOT_WADI_RUM",
     "km": 939
    },
+   "literature": {
+    "status": "region_known",
+    "note": "Western Desert of Egypt: aeolian landforms studied as Mars analogs (El-Baz et al. 1979, JGR; NASA reports on the Kharga depression, ~400 km east)",
+    "url": "https://pubs.usgs.gov/publication/70012315"
+   },
    "conditions": {
     "bare_frac": 1.0,
     "precip_mm": 7.2,
@@ -660,6 +705,11 @@
     "site": "PILOT_WADI_RUM",
     "km": 2750
    },
+   "literature": {
+    "status": "mentioned",
+    "note": "T\u00e9n\u00e9r\u00e9 linear dunes compared with Mars and Titan dunes (far north of Diffa)",
+    "url": "https://www.futura-sciences.com/sciences/actualites/cea-dunes-mars-titan-mieux-comprises-grace-desert-tenere-60334/"
+   },
    "conditions": {
     "bare_frac": 1.0,
     "precip_mm": 73.9,
@@ -715,6 +765,11 @@
     "site": "RIO_TINTO",
     "km": 982
    },
+   "literature": {
+    "status": "region_known",
+    "note": "Southern Morocco: Tindouf Basin soils as a Noachian Mars analog (Oberlin et al. 2018); other Moroccan sites near Erfoud (MARS2013, ESA rover tests)",
+    "url": "https://research-portal.st-andrews.ac.uk/en/publications/evaluation-of-the-tindouf-basin-region-in-southern-morocco-as-an-/"
+   },
    "conditions": {
     "bare_frac": 0.9956,
     "precip_mm": 121.4,
@@ -762,6 +817,11 @@
    "nearest_known": {
     "site": "PILOT_ATACAMA",
     "km": 1125
+   },
+   "literature": {
+    "status": "none_found",
+    "note": "Nearest Peruvian Mars analog is Pampas de La Joya (~260 km SE); nothing found for this area",
+    "url": null
    },
    "conditions": {
     "bare_frac": 0.989,
@@ -819,6 +879,11 @@
    "nearest_known": {
     "site": "PILOT_BOSZHIRA",
     "km": 1633
+   },
+   "literature": {
+    "status": "region_known",
+    "note": "East of the Lut Desert analog region (Foroutan & Zimbelman 2016); nothing found for Zahedan itself",
+    "url": "https://profiles.si.edu/display/sro_139430"
    },
    "conditions": {
     "bare_frac": 0.9983,
