@@ -31,6 +31,12 @@ const FILM = ['hero/s1-arrival', 'earth/s2-twin', 'moon/s3-return', 'transitions
  *  Scrubbing a streamed clip fires a range request per seek; on a slow CDN those stall and the browser
  *  drops them ("media request failed"). */
 const filmBlobs = new Map<string, Promise<string>>();
+/** How many clips have arrived (or failed and will stream instead), for the loading screen. */
+const filmSettled = new Set<string>(); const filmWatch = new Set<() => void>();
+/** The loading screen holds the page (and its smooth scroll) until the film is in. */
+const filmGate: { lenis: Lenis | null; open: boolean } = { lenis: null, open: false };
+/** Never hold a visitor longer than this: past it, the page opens and the rest keep loading. */
+const FILM_WAIT_MS = 12000;
 const filmBlob = (url: string, high = false) => {
   let p = filmBlobs.get(url);
   if (!p) {
@@ -38,9 +44,26 @@ const filmBlob = (url: string, high = false) => {
       .then(r => { if (!r.ok) throw new Error(String(r.status)); return r.blob(); })
       .then(b => URL.createObjectURL(b));
     filmBlobs.set(url, p); p.catch(() => filmBlobs.delete(url));
+    const settle = () => { filmSettled.add(url); filmWatch.forEach(f => f()); };
+    p.then(settle, settle);
   }
   return p;
 };
+/** Progress of the film download and whether the page may open. */
+function useFilmGate() {
+  const [on] = useState(() => typeof window !== 'undefined' && !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches);
+  const [n, setN] = useState(filmSettled.size);
+  const [late, setLate] = useState(false);
+  useEffect(() => {
+    if (!on) return;
+    const f = () => setN(filmSettled.size); filmWatch.add(f); f();
+    const t = setTimeout(() => setLate(true), FILM_WAIT_MS);
+    return () => { filmWatch.delete(f); clearTimeout(t); };
+  }, [on]);
+  const done = !on || late || n >= FILM.length;
+  useEffect(() => { filmGate.open = done; if (done) filmGate.lenis?.start(); }, [done]);
+  return { on, done, pct: Math.round(100 * Math.min(n, FILM.length) / FILM.length) };
+}
 // Opening on Home: start all seven downloads now, in parallel, alongside the mission data the app
 // waits for, not after it (on a slow CDN that wait alone has taken seconds).
 if (typeof window !== 'undefined' && /^(#\/?(home)?)?(\?.*)?$/.test(window.location.hash)
@@ -171,6 +194,8 @@ function useSpatial(root: React.RefObject<HTMLElement | null>) {
     const clamp = (v: number) => Math.min(1, Math.max(0, v));
     // inertial scrolling: wheel and trackpad glide instead of stepping
     const lenis = new Lenis({ duration: .9, smoothWheel: true, autoRaf: true });
+    // the loading screen is up: no scrolling into clips that have not arrived
+    filmGate.lenis = lenis; if (!filmGate.open) { window.scrollTo(0, 0); lenis.stop(); }
     // assign motions once; the ledger alternates sides
     const movers = Array.from(host.querySelectorAll<HTMLElement>('[data-reveal]')).filter(el => !el.closest('.hm-hero'));
     let ledger = 0, heading = 0;
@@ -256,7 +281,7 @@ function useSpatial(root: React.RefObject<HTMLElement | null>) {
     };
     host.classList.add('is-spatial');
     raf = requestAnimationFrame(frame);
-    return () => { dead = true; film.forEach(v => { v.removeEventListener('loadeddata', markReady); v.removeEventListener('seeked', markReady); v.removeAttribute('src'); v.load(); v.classList.remove('is-ready'); }); cancelAnimationFrame(raf); lenis.destroy(); host.classList.remove('is-spatial'); movers.forEach(el => { delete el.dataset.sp; }); };
+    return () => { dead = true; film.forEach(v => { v.removeEventListener('loadeddata', markReady); v.removeEventListener('seeked', markReady); v.removeAttribute('src'); v.load(); v.classList.remove('is-ready'); }); cancelAnimationFrame(raf); filmGate.lenis = null; lenis.destroy(); host.classList.remove('is-spatial'); movers.forEach(el => { delete el.dataset.sp; }); };
   }, [root]);
 }
 
@@ -266,6 +291,8 @@ export function HomePage() {
   const root = useRef<HTMLElement>(null);
   const [destination, setDestination] = useState<'moon' | 'mars'>('moon');
   const resume = usePlanet(st => (st.world() ? `${st.world() === 'moon' ? L(lang, 'the Moon', 'Луна') : L(lang, 'Mars', 'Марс')}${st.inv.siteName ? ` · ${st.inv.siteName}` : ''}` : null));
+  // before useSpatial: its effect reads whether the gate is already open (film cached from a past visit)
+  const gate = useFilmGate();
   useReveal(root); useParallax(root); useSpatial(root);
   if (!data) return null;
 
@@ -301,6 +328,11 @@ export function HomePage() {
   ];
 
   return <main ref={root} className="hm" aria-labelledby="hm-title">
+    {gate.on && <div className="hm-preload" data-done={gate.done ? '' : undefined} aria-hidden={gate.done} role="status" aria-live="polite">
+      <span className="hm-preload-label">{L(lang, 'Loading the flight', 'Загружаем полёт')}</span>
+      <span className="hm-preload-pct">{gate.pct}<small>%</small></span>
+      <span className="hm-preload-bar" aria-hidden="true"><i style={{ transform: `scaleX(${gate.pct / 100})` }} /></span>
+    </div>}
     {/* one continuous film behind the page: scrolling flies the camera forward, scrolling back flies it back */}
     <div className="hm-film" aria-hidden="true">
       {/* each clip sits on its own still: if a phone has not decoded the clip yet, the still shows instead of black */}

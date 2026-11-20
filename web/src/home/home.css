@@ -481,3 +481,13 @@ html.lenis, html.lenis body { height: auto; }
 .hm-sim-row button span { font-family: var(--font-mono); font-size: 9.5px; letter-spacing: .06em; text-transform: uppercase; text-align: center; line-height: 1.25; }
 @media (max-width: 760px) { .hm-sim-label, .hm-sim-row { display: none; } }
 .hm .hm-panel .hm-launch-button { margin-top: 4px; }
+
+/* ---------- film loading screen: holds the page until the clips are in (max 12 s) ---------- */
+.hm-preload { position: fixed; inset: 0; z-index: 1000; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; background: #000; color: var(--paper, #f2efe8); transition: opacity .6s ease, visibility 0s linear .6s; }
+.hm-preload[data-done] { opacity: 0; visibility: hidden; pointer-events: none; }
+.hm-preload-label { font-family: var(--font-mono); font-size: 11px; letter-spacing: .22em; text-transform: uppercase; color: var(--paper-3, #8a877f); }
+.hm-preload-pct { font-family: var(--font-display); font-weight: 700; font-size: clamp(56px, 9vw, 120px); line-height: .9; font-variant-numeric: tabular-nums; }
+.hm-preload-pct small { font-size: .4em; margin-left: .08em; color: var(--paper-3, #8a877f); }
+.hm-preload-bar { width: min(320px, 70vw); height: 1px; background: rgba(255, 255, 255, .15); overflow: hidden; }
+.hm-preload-bar i { display: block; height: 100%; background: currentColor; transform-origin: left; transition: transform .4s ease; }
+@media (prefers-reduced-motion: reduce) { .hm-preload { display: none; } }
