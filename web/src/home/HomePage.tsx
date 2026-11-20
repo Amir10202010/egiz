@@ -172,7 +172,8 @@ function useSpatial(root: React.RefObject<HTMLElement | null>) {
     const primed = new Set<HTMLVideoElement>(), priming = new Set<HTMLVideoElement>();
     const prime = (v: HTMLVideoElement) => {
       if (primed.has(v)) return; primed.add(v);
-      if (v.preload !== 'auto') { v.preload = 'auto'; v.load(); }
+      // no v.load() here: it restarts the element and cancels the request already in flight (a red duplicate in Network)
+      if (v.preload !== 'auto') v.preload = 'auto';
       priming.add(v);
       const done = () => { priming.delete(v); v.pause(); };
       const p = v.play(); if (p) p.then(done, done); else done();
