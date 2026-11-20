@@ -27,6 +27,24 @@ const CLIP = (base: string) => `media/cinematic/${base}-720.mp4?v=3`;
 const PHONE_LEAD = .8;
 /** The seven clips, in flight order: one continuous film behind the whole page. */
 const FILM = ['hero/s1-arrival', 'earth/s2-twin', 'moon/s3-return', 'transitions/s4-passage', 'mars/s5-jezero', 'missions/s6-answer', 'orbital/s7-home'];
+/** Each clip is downloaded whole into a blob URL, once per page load, and kept for return visits to Home.
+ *  Scrubbing a streamed clip fires a range request per seek; on a slow CDN those stall and the browser
+ *  drops them ("media request failed"). */
+const filmBlobs = new Map<string, Promise<string>>();
+const filmBlob = (url: string, high = false) => {
+  let p = filmBlobs.get(url);
+  if (!p) {
+    p = fetch(url, { priority: high ? 'high' : 'auto' } as RequestInit)
+      .then(r => { if (!r.ok) throw new Error(String(r.status)); return r.blob(); })
+      .then(b => URL.createObjectURL(b));
+    filmBlobs.set(url, p); p.catch(() => filmBlobs.delete(url));
+  }
+  return p;
+};
+// Opening on Home: start all seven downloads now, in parallel, alongside the mission data the app
+// waits for, not after it (on a slow CDN that wait alone has taken seconds).
+if (typeof window !== 'undefined' && /^(#\/?(home)?)?(\?.*)?$/.test(window.location.hash)
+  && !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) FILM.forEach((b, i) => { filmBlob(asset(CLIP(b)), i < 2).catch(() => {}); });
 
 type Body = 'moon' | 'earth' | 'mars' | 'transit';
 interface Place { body: Body; en: string; ru: string; lat?: number; lon?: number }
@@ -164,19 +182,14 @@ function useSpatial(root: React.RefObject<HTMLElement | null>) {
     // a clip shows over its still only once it has a decoded frame
     const markReady = (e: Event) => { const v = e.currentTarget as HTMLVideoElement; if (v.readyState >= 2) v.classList.add('is-ready'); };
     film.forEach(v => { v.addEventListener('loadeddata', markReady); v.addEventListener('seeked', markReady); });
-    // Every clip is downloaded whole, all at once, the moment the page opens, then handed to its <video>
-    // as a local blob. Scrubbing a streamed clip fires a range request per seek; on a slow CDN those
-    // stall and the browser drops them ("media request failed"). In parallel, not in a queue: Vercel
-    // serves a random file at 0.3 MB/s now and then, and in a queue that one held back every clip after it.
-    const ac = new AbortController(), blobs: string[] = [];
+    // every clip from its blob (already downloading if the page opened on Home), all in parallel:
+    // Vercel serves a random file slowly now and then, and in a queue that one held back the rest
+    let dead = false;
     film.forEach((v, j) => {
       const url = v.dataset.src!;
-      const attach = (src: string) => { v.preload = 'auto'; v.src = src; };
-      fetch(url, { signal: ac.signal, priority: j < 2 ? 'high' : 'auto' } as RequestInit)
-        .then(r => { if (!r.ok) throw new Error(String(r.status)); return r.blob(); })
-        .then(b => { const u = URL.createObjectURL(b); blobs.push(u); attach(u); })
-        // no fetch (old browser, blocked): fall back to streaming the file
-        .catch(() => { if (!ac.signal.aborted) attach(url); });
+      const attach = (src: string) => { if (dead) return; v.preload = 'auto'; v.src = src; };
+      // no fetch (old browser, blocked): fall back to streaming the file
+      filmBlob(url, j < 2).then(attach, () => attach(url));
     });
     // phones (iOS Safari above all) decode nothing until a clip has played once:
     // start each nearby clip muted for a moment, then hold it for scrubbing
@@ -243,7 +256,7 @@ function useSpatial(root: React.RefObject<HTMLElement | null>) {
     };
     host.classList.add('is-spatial');
     raf = requestAnimationFrame(frame);
-    return () => { ac.abort(); film.forEach(v => { v.removeEventListener('loadeddata', markReady); v.removeEventListener('seeked', markReady); v.removeAttribute('src'); v.load(); v.classList.remove('is-ready'); }); blobs.forEach(u => URL.revokeObjectURL(u)); cancelAnimationFrame(raf); lenis.destroy(); host.classList.remove('is-spatial'); movers.forEach(el => { delete el.dataset.sp; }); };
+    return () => { dead = true; film.forEach(v => { v.removeEventListener('loadeddata', markReady); v.removeEventListener('seeked', markReady); v.removeAttribute('src'); v.load(); v.classList.remove('is-ready'); }); cancelAnimationFrame(raf); lenis.destroy(); host.classList.remove('is-spatial'); movers.forEach(el => { delete el.dataset.sp; }); };
   }, [root]);
 }
 
