@@ -20,13 +20,9 @@ type Lang = 'en' | 'ru';
 const L = <T,>(lang: Lang, en: T, ru: T) => (lang === 'ru' ? ru : en);
 const asset = (path: string) => `${import.meta.env.BASE_URL}${path}`;
 
-/** Pick the rendition by the screen's real pixels: phones 720p, everything else 1080p
- *  (the film sits behind text; 1440p cost 4x the download for no visible gain). */
-const CLIP_RES = (() => {
-  if (typeof window === 'undefined') return 1080;
-  const px = Math.max(window.innerWidth, window.innerHeight) * Math.min(window.devicePixelRatio || 1, 2);
-  return px < 1000 ? 720 : 1080;
-})();
+/** One light 720p rendition for every screen (~1.6 MB a clip, ~11 MB the film): it sits behind text,
+ *  and every clip must arrive before the visitor scrolls to it. `v` busts caches when re-encoded. */
+const CLIP = (base: string) => `media/cinematic/${base}-720.mp4?v=3`;
 /** On phones the film starts this far into the first clip. */
 const PHONE_LEAD = .8;
 /** The seven clips, in flight order: one continuous film behind the whole page. */
@@ -168,27 +164,20 @@ function useSpatial(root: React.RefObject<HTMLElement | null>) {
     // a clip shows over its still only once it has a decoded frame
     const markReady = (e: Event) => { const v = e.currentTarget as HTMLVideoElement; if (v.readyState >= 2) v.classList.add('is-ready'); };
     film.forEach(v => { v.addEventListener('loadeddata', markReady); v.addEventListener('seeked', markReady); });
-    // Every clip is downloaded whole from the moment the page opens, one at a time in flight order
-    // (the clip in view jumps the queue), then handed to its <video> as a local blob. Scrubbing a
-    // streamed clip fires a range request per seek; on a slow CDN those stall and the browser drops
-    // them ("media request failed"), so the film froze until the visitor stopped scrolling.
+    // Every clip is downloaded whole, all at once, the moment the page opens, then handed to its <video>
+    // as a local blob. Scrubbing a streamed clip fires a range request per seek; on a slow CDN those
+    // stall and the browser drops them ("media request failed"). In parallel, not in a queue: Vercel
+    // serves a random file at 0.3 MB/s now and then, and in a queue that one held back every clip after it.
     const ac = new AbortController(), blobs: string[] = [];
-    const loaded = new Set<number>(); let fetching = -1, want = 0;
-    const attach = (j: number, src: string) => { const v = film[j]; loaded.add(j); v.preload = 'auto'; v.src = src; };
-    const pump = () => {
-      if (fetching >= 0 || ac.signal.aborted) return;
-      // nearest clip to the one in view that has no source yet
-      let j = -1; for (let d = 0; d < film.length && j < 0; d++) for (const c of [want + d, want - d]) if (c >= 0 && c < film.length && !loaded.has(c)) { j = c; break; }
-      if (j < 0) return;
-      fetching = j; const url = film[j].dataset.src!;
-      fetch(url, { signal: ac.signal })
+    film.forEach((v, j) => {
+      const url = v.dataset.src!;
+      const attach = (src: string) => { v.preload = 'auto'; v.src = src; };
+      fetch(url, { signal: ac.signal, priority: j < 2 ? 'high' : 'auto' } as RequestInit)
         .then(r => { if (!r.ok) throw new Error(String(r.status)); return r.blob(); })
-        .then(b => { const u = URL.createObjectURL(b); blobs.push(u); attach(j, u); })
-        // no fetch (old browser, blocked, aborted): fall back to streaming the file
-        .catch(() => { if (!ac.signal.aborted) attach(j, url); })
-        .finally(() => { fetching = -1; pump(); });
-    };
-    pump();
+        .then(b => { const u = URL.createObjectURL(b); blobs.push(u); attach(u); })
+        // no fetch (old browser, blocked): fall back to streaming the file
+        .catch(() => { if (!ac.signal.aborted) attach(url); });
+    });
     // phones (iOS Safari above all) decode nothing until a clip has played once:
     // start each nearby clip muted for a moment, then hold it for scrubbing
     const primed = new Set<HTMLVideoElement>(), priming = new Set<HTMLVideoElement>();
@@ -220,9 +209,7 @@ function useSpatial(root: React.RefObject<HTMLElement | null>) {
         const pos = k + lead + (1 - lead) * clamp((y - anchors[k]) / Math.max(1, anchors[k + 1] - anchors[k]));
         filmSp = filmSp < 0 ? pos : filmSp + (pos - filmSp) * (1 - Math.exp(-dt * 12));
         const ci = Math.min(n - 1, Math.floor(filmSp)); const ct = filmSp - ci;
-        if (ci !== shown) { layers[shown].style.opacity = '0'; layers[ci].style.opacity = '1'; shown = ci; }
-        if (want !== ci) { want = ci; pump(); }
-        film.forEach((v, j) => { if (Math.abs(j - ci) <= 1) prime(v); if (!v.paused && !priming.has(v)) v.pause(); });
+        if (ci !== shown) { layers[shown].style.opacity = '0'; layers[ci].style.opacity = '1'; shown = ci; }        film.forEach((v, j) => { if (Math.abs(j - ci) <= 1) prime(v); if (!v.paused && !priming.has(v)) v.pause(); });
         const v = film[ci];
         if (v.readyState >= 2 && v.duration) {
           // one seek at a time: queued seeks are what makes scrubbing stutter
@@ -306,7 +293,7 @@ export function HomePage() {
       {/* each clip sits on its own still: if a phone has not decoded the clip yet, the still shows instead of black */}
       {FILM.map((base, i) => <div key={base} className="hm-film-layer" data-film-layer={i} style={{ opacity: i === 0 ? 1 : 0 }}>
         <img src={asset(`media/cinematic/${base}.jpg`)} alt="" decoding="async" />
-        <video data-film={i} muted playsInline disablePictureInPicture preload="none" data-src={asset(`media/cinematic/${base}-${CLIP_RES}.mp4`)} />
+        <video data-film={i} muted playsInline disablePictureInPicture preload="none" data-src={asset(CLIP(base))} />
       </div>)}
       <span className="hm-veo">{L(lang, 'AI-generated (Veo) — illustration, not data', 'создано ИИ (Veo) — иллюстрация, не данные')}</span>
     </div>

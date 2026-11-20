@@ -2,10 +2,10 @@
 
 Masters live in web/media-src/cinematic/<group>/<name>.mp4 (not committed). For each clip this writes
 into web/public/media/cinematic/<group>/:
-  <name>-1080.mp4  1920x1080, CRF 24 capped at 4 Mbit/s (~4 MB per 8 s clip)   desktop
-  <name>-720.mp4   1280x720,  CRF 25 capped at 2 Mbit/s (~2 MB per 8 s clip)   phones
-The cap matters: the page downloads every clip up front, and the film sits behind text, so
-24 Mbit/s 'visually lossless' renditions only made the site stall (Vercel serves ~0.4 MB/s per file).
+  <name>-720.mp4   1280x720, CRF 26 capped at 1.5 Mbit/s (~1.6 MB per 8 s clip)   every screen
+The cap matters: the page downloads every clip up front, the film sits behind text, and Vercel's
+CDN often serves a single file at ~0.4 MB/s. At 1080p (27 MB for the film) visitors scrolled past
+clips that had not arrived; the whole film is now ~11 MB.
   <name>.jpg       first frame, 1920 px     (poster while the video loads)
   <name>-end.jpg   last frame,  1920 px     (held when the film hands off)
 Scroll-scrubbed clips get a keyframe every 12 frames (0.5 s) so seeking to any scroll position is instant;
@@ -47,9 +47,9 @@ def encode(name):
     dst = OUT / group; dst.mkdir(parents=True, exist_ok=True)
     gop = ['-g', '12', '-keyint_min', '12', '-sc_threshold', '0'] if scrub else ['-g', '48']
     audio = ['-an'] if scrub else ['-c:a', 'aac', '-b:a', '160k']
-    for height, width, crf, cap in ((1080, 1920, 24, 4), (720, 1280, 25, 2)):
+    for height, width, crf, cap in ((720, 1280, 26, 1.5),):
         run('-i', src, '-vf', f'scale={width}:{height}:flags=lanczos', '-c:v', 'libx264', '-preset', 'slow', '-crf', crf,
-            '-maxrate', f'{cap}M', '-bufsize', f'{cap * 2}M',
+            '-maxrate', f'{int(cap * 1000)}k', '-bufsize', f'{int(cap * 2000)}k',
             '-profile:v', 'high', '-pix_fmt', 'yuv420p', *gop, *audio, '-movflags', '+faststart', dst / f'{name}-{height}.mp4')
     if src.name.endswith('-1440.mp4'): return print(f'{name}: re-encoded from 1440p', flush=True)
     run('-i', src, '-vf', 'select=eq(n\\,0),scale=1920:-2:flags=lanczos', '-frames:v', '1', '-q:v', '2', dst / f'{name}.jpg')
