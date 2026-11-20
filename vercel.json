@@ -31,7 +31,7 @@
       ]
     },
     {
-      "source": "/(textures|hero|artwork|img|models|world|terrain|vendor|dynamics)/(.*)",
+      "source": "/(textures|hero|artwork|img|models|world|terrain|vendor|dynamics|media)/(.*)",
       "headers": [
         {
           "key": "Cache-Control",

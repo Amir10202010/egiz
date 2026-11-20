@@ -20,11 +20,12 @@ type Lang = 'en' | 'ru';
 const L = <T,>(lang: Lang, en: T, ru: T) => (lang === 'ru' ? ru : en);
 const asset = (path: string) => `${import.meta.env.BASE_URL}${path}`;
 
-/** Pick the rendition by the screen's real pixels: phones 720p, laptops 1080p, large or dense screens 1440p. */
+/** Pick the rendition by the screen's real pixels: phones 720p, everything else 1080p
+ *  (the film sits behind text; 1440p cost 4x the download for no visible gain). */
 const CLIP_RES = (() => {
   if (typeof window === 'undefined') return 1080;
   const px = Math.max(window.innerWidth, window.innerHeight) * Math.min(window.devicePixelRatio || 1, 2);
-  return px < 1000 ? 720 : px < 1800 ? 1080 : 1440;
+  return px < 1000 ? 720 : 1080;
 })();
 /** On phones the film starts this far into the first clip. */
 const PHONE_LEAD = .8;
@@ -167,13 +168,32 @@ function useSpatial(root: React.RefObject<HTMLElement | null>) {
     // a clip shows over its still only once it has a decoded frame
     const markReady = (e: Event) => { const v = e.currentTarget as HTMLVideoElement; if (v.readyState >= 2) v.classList.add('is-ready'); };
     film.forEach(v => { v.addEventListener('loadeddata', markReady); v.addEventListener('seeked', markReady); });
-    // phones (iOS Safari above all) ignore preload and decode nothing until a clip has played once:
+    // Every clip is downloaded whole from the moment the page opens, one at a time in flight order
+    // (the clip in view jumps the queue), then handed to its <video> as a local blob. Scrubbing a
+    // streamed clip fires a range request per seek; on a slow CDN those stall and the browser drops
+    // them ("media request failed"), so the film froze until the visitor stopped scrolling.
+    const ac = new AbortController(), blobs: string[] = [];
+    const loaded = new Set<number>(); let fetching = -1, want = 0;
+    const attach = (j: number, src: string) => { const v = film[j]; loaded.add(j); v.preload = 'auto'; v.src = src; };
+    const pump = () => {
+      if (fetching >= 0 || ac.signal.aborted) return;
+      // nearest clip to the one in view that has no source yet
+      let j = -1; for (let d = 0; d < film.length && j < 0; d++) for (const c of [want + d, want - d]) if (c >= 0 && c < film.length && !loaded.has(c)) { j = c; break; }
+      if (j < 0) return;
+      fetching = j; const url = film[j].dataset.src!;
+      fetch(url, { signal: ac.signal })
+        .then(r => { if (!r.ok) throw new Error(String(r.status)); return r.blob(); })
+        .then(b => { const u = URL.createObjectURL(b); blobs.push(u); attach(j, u); })
+        // no fetch (old browser, blocked, aborted): fall back to streaming the file
+        .catch(() => { if (!ac.signal.aborted) attach(j, url); })
+        .finally(() => { fetching = -1; pump(); });
+    };
+    pump();
+    // phones (iOS Safari above all) decode nothing until a clip has played once:
     // start each nearby clip muted for a moment, then hold it for scrubbing
     const primed = new Set<HTMLVideoElement>(), priming = new Set<HTMLVideoElement>();
     const prime = (v: HTMLVideoElement) => {
-      if (primed.has(v)) return; primed.add(v);
-      // no v.load() here: it restarts the element and cancels the request already in flight (a red duplicate in Network)
-      if (v.preload !== 'auto') v.preload = 'auto';
+      if (primed.has(v) || !v.src) return; primed.add(v);
       priming.add(v);
       const done = () => { priming.delete(v); v.pause(); };
       const p = v.play(); if (p) p.then(done, done); else done();
@@ -201,6 +221,7 @@ function useSpatial(root: React.RefObject<HTMLElement | null>) {
         filmSp = filmSp < 0 ? pos : filmSp + (pos - filmSp) * (1 - Math.exp(-dt * 12));
         const ci = Math.min(n - 1, Math.floor(filmSp)); const ct = filmSp - ci;
         if (ci !== shown) { layers[shown].style.opacity = '0'; layers[ci].style.opacity = '1'; shown = ci; }
+        if (want !== ci) { want = ci; pump(); }
         film.forEach((v, j) => { if (Math.abs(j - ci) <= 1) prime(v); if (!v.paused && !priming.has(v)) v.pause(); });
         const v = film[ci];
         if (v.readyState >= 2 && v.duration) {
@@ -235,7 +256,7 @@ function useSpatial(root: React.RefObject<HTMLElement | null>) {
     };
     host.classList.add('is-spatial');
     raf = requestAnimationFrame(frame);
-    return () => { film.forEach(v => { v.removeEventListener('loadeddata', markReady); v.removeEventListener('seeked', markReady); }); cancelAnimationFrame(raf); lenis.destroy(); host.classList.remove('is-spatial'); movers.forEach(el => { delete el.dataset.sp; }); };
+    return () => { ac.abort(); film.forEach(v => { v.removeEventListener('loadeddata', markReady); v.removeEventListener('seeked', markReady); v.removeAttribute('src'); v.load(); v.classList.remove('is-ready'); }); blobs.forEach(u => URL.revokeObjectURL(u)); cancelAnimationFrame(raf); lenis.destroy(); host.classList.remove('is-spatial'); movers.forEach(el => { delete el.dataset.sp; }); };
   }, [root]);
 }
 
@@ -285,7 +306,7 @@ export function HomePage() {
       {/* each clip sits on its own still: if a phone has not decoded the clip yet, the still shows instead of black */}
       {FILM.map((base, i) => <div key={base} className="hm-film-layer" data-film-layer={i} style={{ opacity: i === 0 ? 1 : 0 }}>
         <img src={asset(`media/cinematic/${base}.jpg`)} alt="" decoding="async" />
-        <video data-film={i} muted playsInline disablePictureInPicture preload={i < 2 ? 'auto' : 'none'} src={asset(`media/cinematic/${base}-${CLIP_RES}.mp4`)} />
+        <video data-film={i} muted playsInline disablePictureInPicture preload="none" data-src={asset(`media/cinematic/${base}-${CLIP_RES}.mp4`)} />
       </div>)}
       <span className="hm-veo">{L(lang, 'AI-generated (Veo) — illustration, not data', 'создано ИИ (Veo) — иллюстрация, не данные')}</span>
     </div>
